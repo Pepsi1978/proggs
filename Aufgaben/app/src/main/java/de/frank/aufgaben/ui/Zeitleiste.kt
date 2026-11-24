@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithContent
@@ -55,6 +56,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -186,6 +188,64 @@ private fun Leiste(
             },
     ) {
         val breite = maxWidth
+        val flaeche = breite - SPALTE - 6.dp
+        // Termine: Dicht liegende Startzeiten dehnt das Band (Zeitband.dehnungen), die Karten stehen dann untereinander.
+        // Was sich trotzdem noch überdeckt (gleiche Startzeit, beim Ziehen das ungedehnte Band), steht nebeneinander —
+        // nur innerhalb dieser Gruppe; alle anderen Karten behalten die volle Breite.
+        val sortiert = termine.sortedBy { it.minuten }
+        val spalteVon = HashMap<Long, Int>()
+        val spaltenVon = HashMap<Long, Int>()
+        run {
+            fun mitte(a: Aufgabe) = yDp((a.minuten ?: vonMin).coerceIn(vonMin, bisMin)).value
+            val nachOben = sortiert.sortedBy { mitte(it) - karteHoehe(it.dauer).value / 2 }
+            val spalten = mutableListOf<Float>() // Unterkante der letzten Karte je Spalte in der laufenden Gruppe
+            val gruppe = mutableListOf<Long>()
+            var gruppeEnde = Float.NEGATIVE_INFINITY
+            fun abschliessen() { gruppe.forEach { spaltenVon[it] = spalten.size.coerceAtLeast(1) }; gruppe.clear(); spalten.clear() }
+            nachOben.forEach { a ->
+                val h = karteHoehe(a.dauer).value
+                val oben = mitte(a) - h / 2
+                // Nur Rundungsrauschen wird übersehen; jede echte Überdeckung kommt in dieselbe Gruppe.
+                if (oben >= gruppeEnde - 0.01f) abschliessen()
+                val i = spalten.indexOfFirst { it <= oben + 0.01f }.let { if (it < 0) { spalten.add(0f); spalten.lastIndex } else it }
+                spalten[i] = oben + h
+                spalteVon[a.id] = i
+                gruppe.add(a.id)
+                gruppeEnde = maxOf(gruppeEnde, oben + h)
+            }
+            abschliessen()
+        }
+        // Uhrzeit der Jetzt-Linie: mittig als roter Knopf mit „Uhr“. Berührt oder überdeckt er eine Aufgabenkarte, steht sie
+        // stattdessen links in der Beschriftungsspalte auf Höhe der Jetzt-Linie, rot umrandet und ohne „Uhr“, und ersetzt dort
+        // die Stundenbeschriftung, mit der sie kollidieren würde. Jeden Frame neu gerechnet, der Rückweg geht also von selbst.
+        val uhr = jetztY()?.let { y ->
+            with(dichte) {
+                val x = SPALTE.toPx() - 8.dp.toPx()
+                val mittig = messer.measure("%02d:%02d Uhr".format(jetzt / 60, jetzt % 60), TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                val bw = mittig.size.width + 16.dp.toPx()
+                val bh = mittig.size.height + 5.dp.toPx()
+                val mitte = (x + breite.toPx()) / 2f
+                val knopf = Rechteck(mitte - bw / 2f, y - bh / 2f, mitte + bw / 2f, y + bh / 2f)
+                val karten = sortiert.map { a ->
+                    val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
+                    val h = karteHoehe(a.dauer).toPx()
+                    val n = spaltenVon[a.id] ?: 1
+                    val l = (SPALTE + flaeche / n * (spalteVon[a.id] ?: 0)).toPx()
+                    val o = obenPx + band.y(min, stundePx, lueckePx) - h / 2f
+                    Rechteck(l, o, l + (flaeche / n - 4.dp).toPx(), o + h)
+                }
+                val kurz = "%02d:%02d".format(jetzt / 60, jetzt % 60)
+                var links = messer.measure(kurz, TextStyle(color = f.gefahr, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                if (links.size.width + 6.dp.toPx() > x - 8.dp.toPx()) links = messer.measure(kurz, TextStyle(color = f.gefahr, fontSize = 10.sp, fontWeight = FontWeight.Bold))
+                val stunden = ((vonMin + 59) / 60..bisMin / 60).map { it * 60 }.filterNot { band.inLuecke(it) }
+                val stundeHoehe = messer.measure("00:00", TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium)).size.height.toFloat()
+                val lage = uhrLage(
+                    knopf, karten, 2.dp.toPx(), y, links.size.height + 4.dp.toPx(),
+                    stunden.map { obenPx + band.y(it, stundePx, lueckePx) }, stundeHoehe, 2.dp.toPx(),
+                )
+                UhrZeichnung(y, mittig, knopf, links, lage.links, lage.verdeckt.map { stunden[it] }.toSet())
+            }
+        }
         Canvas(Modifier.fillMaxSize()) {
             val x = SPALTE.toPx() - 8.dp.toPx()
             val y0 = obenPx
@@ -198,8 +258,10 @@ private fun Leiste(
                 val y = yVon(m)
                 drawLine(f.textSchwach.copy(alpha = 0.18f), Offset(x + 8.dp.toPx(), y), Offset(size.width, y), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 8f)))
                 drawLine(f.textLeise.copy(alpha = 0.6f), Offset(x - 6.dp.toPx(), y), Offset(x + 4.dp.toPx(), y), 2f, StrokeCap.Round)
-                val text = messer.measure("%02d:00".format(s), TextStyle(color = f.textLeise, fontSize = 11.sp, fontWeight = FontWeight.Medium))
-                drawText(text, topLeft = Offset(x - 10.dp.toPx() - text.size.width, y - text.size.height / 2f))
+                if (uhr == null || m !in uhr.verdeckt) {
+                    val text = messer.measure("%02d:00".format(s), TextStyle(color = f.textLeise, fontSize = 11.sp, fontWeight = FontWeight.Medium))
+                    drawText(text, topLeft = Offset(x - 10.dp.toPx() - text.size.width, y - text.size.height / 2f))
+                }
                 if (m + 30 <= bisMin && !band.inLuecke(m + 30)) {
                     val yh = yVon(m + 30)
                     drawLine(f.textSchwach.copy(alpha = 0.5f), Offset(x - 3.dp.toPx(), yh), Offset(x + 2.dp.toPx(), yh), 1.5f)
@@ -229,39 +291,12 @@ private fun Leiste(
                 drawCircle(Color.White, 2.5.dp.toPx(), Offset(x, y))
             }
         }
-        val flaeche = breite - SPALTE - 6.dp
         // Zusammengerückte freie Stunden; ein Tipp zeigt den ganzen Tag
         band.luecken.forEach { l ->
             LueckenMarke(
                 l, onLuecke,
                 Modifier.offset(x = SPALTE + 2.dp, y = obenDp + yDp(l.von) + 4.dp).width(flaeche - 4.dp).height(LUECKE - 8.dp),
             )
-        }
-        // Termine: Dicht liegende Startzeiten dehnt das Band (Zeitband.dehnungen), die Karten stehen dann untereinander.
-        // Was sich trotzdem noch überdeckt (gleiche Startzeit, beim Ziehen das ungedehnte Band), steht nebeneinander —
-        // nur innerhalb dieser Gruppe; alle anderen Karten behalten die volle Breite.
-        val sortiert = termine.sortedBy { it.minuten }
-        val spalteVon = HashMap<Long, Int>()
-        val spaltenVon = HashMap<Long, Int>()
-        run {
-            fun mitte(a: Aufgabe) = yDp((a.minuten ?: vonMin).coerceIn(vonMin, bisMin)).value
-            val nachOben = sortiert.sortedBy { mitte(it) - karteHoehe(it.dauer).value / 2 }
-            val spalten = mutableListOf<Float>() // Unterkante der letzten Karte je Spalte in der laufenden Gruppe
-            val gruppe = mutableListOf<Long>()
-            var gruppeEnde = Float.NEGATIVE_INFINITY
-            fun abschliessen() { gruppe.forEach { spaltenVon[it] = spalten.size.coerceAtLeast(1) }; gruppe.clear(); spalten.clear() }
-            nachOben.forEach { a ->
-                val h = karteHoehe(a.dauer).value
-                val oben = mitte(a) - h / 2
-                // Nur Rundungsrauschen wird übersehen; jede echte Überdeckung kommt in dieselbe Gruppe.
-                if (oben >= gruppeEnde - 0.01f) abschliessen()
-                val i = spalten.indexOfFirst { it <= oben + 0.01f }.let { if (it < 0) { spalten.add(0f); spalten.lastIndex } else it }
-                spalten[i] = oben + h
-                spalteVon[a.id] = i
-                gruppe.add(a.id)
-                gruppeEnde = maxOf(gruppeEnde, oben + h)
-            }
-            abschliessen()
         }
         // Gelber Startzeit-Strich, äußerer Teil: vom Zeitpfeil waagerecht bis an die Karte, genau auf Höhe ihrer Mitte
         // (= Startzeit). Unter den Karten gezeichnet, damit er nie quer über eine Karte links daneben läuft; das Stück in
@@ -292,18 +327,32 @@ private fun Leiste(
                     .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y + it.size.height / 2f) },
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }
         }
-        // Uhrzeit-Marke mittig auf der Jetzt-Linie, über den Terminen gezeichnet, damit sie nie verdeckt ist
-        Canvas(Modifier.fillMaxSize()) {
-            val y = jetztY() ?: return@Canvas
-            val text = messer.measure("%02d:%02d Uhr".format(jetzt / 60, jetzt % 60), TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
-            val bw = text.size.width + 16.dp.toPx()
-            val bh = text.size.height + 5.dp.toPx()
-            val mitte = (SPALTE.toPx() - 8.dp.toPx() + size.width) / 2f
-            drawRoundRect(f.gefahr, Offset(mitte - bw / 2f, y - bh / 2f), Size(bw, bh), CornerRadius(bh / 2f))
-            drawText(text, topLeft = Offset(mitte - text.size.width / 2f, y - text.size.height / 2f))
+        // Uhrzeit-Marke über den Terminen gezeichnet, damit sie nie verdeckt ist: mittig, oder links neben dem Zeitpfeil,
+        // wenn sie mittig eine Karte berühren würde (siehe [uhr]).
+        if (uhr != null) Canvas(Modifier.fillMaxSize()) {
+            val y = uhr.y
+            if (!uhr.links) {
+                val k = uhr.knopf
+                drawRoundRect(f.gefahr, Offset(k.links, k.oben), Size(k.rechts - k.links, k.unten - k.oben), CornerRadius((k.unten - k.oben) / 2f))
+                drawText(uhr.mittig, topLeft = Offset((k.links + k.rechts) / 2f - uhr.mittig.size.width / 2f, y - uhr.mittig.size.height / 2f))
+            } else {
+                val x = SPALTE.toPx() - 8.dp.toPx()
+                val t = uhr.kurz
+                val rechts = x - 7.dp.toPx()
+                val bw = t.size.width + 6.dp.toPx()
+                val bh = t.size.height + 4.dp.toPx()
+                val l = (rechts - bw).coerceAtLeast(1.dp.toPx())
+                drawRoundRect(f.gefahr, Offset(l, y - bh / 2f), Size(rechts - l, bh), CornerRadius(bh / 2f), style = Stroke(1.5.dp.toPx()))
+                drawText(t, topLeft = Offset((l + rechts) / 2f - t.size.width / 2f, y - t.size.height / 2f))
+            }
         }
     }
 }
+
+/** Fertig gemessene Uhrzeit-Marke der Jetzt-Linie und ihre Lage (mittig oder links), einmal pro Frame gerechnet. */
+private class UhrZeichnung(
+    val y: Float, val mittig: TextLayoutResult, val knopf: Rechteck, val kurz: TextLayoutResult, val links: Boolean, val verdeckt: Set<Int>,
+)
 
 /** „3 Std. frei“ in einer zusammengerückten Lücke; mit [aktion] zeigt ein Tipp den ganzen Tag. */
 @Composable
