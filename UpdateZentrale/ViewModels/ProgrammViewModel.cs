@@ -65,6 +65,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         "reposkript" => "Eigenes Skript",
         "opencodefix" => "Windows-Fix-Build",
         "opencodesitzung" => "OpenLauncher-Sitzung",
+        "jarvisverteilung" => "Jarvis-Verteilung",
         _ => Eintrag.Art
     };
 
@@ -1091,6 +1092,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         "reposkript" => "pwsh -File " + Eintrag.Skript + " " + Eintrag.SkriptArgumente,
         "opencodefix" => Providers.OpenCodeFixAktualisierer.Befehlsbeschreibung,
         "opencodesitzung" => Providers.OpenCodeSitzungAktualisierer.Befehlsbeschreibung,
+        "jarvisverteilung" => "python Werkzeuge/jarvis-verteilung/jarvis_verteilung.py installieren",
         _ => Eintrag.Art
     };
 

@@ -966,6 +966,7 @@
     {"versionCode": 957, "versionName": "1.8.946", "stand": "24.11.2026, 09:52 Uhr", "notiz": "OpenLauncher-Auswahl ordnet neue, noch unbekannte Modellgruppen hinten an statt die ganze Reihenfolge umzustellen."},
     {"versionCode": 958, "versionName": "1.8.947", "stand": "24.11.2026, 10:16 Uhr", "notiz": "Programmier- und Nachtrag-Symbol sind wieder fast durchsichtig wie die übrigen Seitenbuttons und wirken nicht mehr vorab aktiv."},
     {"versionCode": 959, "versionName": "1.8.948", "stand": "24.11.2026, 10:18 Uhr", "notiz": "Interne Beschreibung der Seitenbuttons und Auswahlknöpfe präzisiert, sichtbar ändert sich nichts."},
-    {"versionCode": 960, "versionName": "1.8.949", "stand": "24.11.2026, 10:51 Uhr", "notiz": "Nachträge an fertig gemeldete Antigravity-Sitzungen kommen wieder an, und Jarvis zeigt eingereiht, empfangen, bearbeitet oder nicht zustellbar mit Grund."}
+    {"versionCode": 960, "versionName": "1.8.949", "stand": "24.11.2026, 10:51 Uhr", "notiz": "Nachträge an fertig gemeldete Antigravity-Sitzungen kommen wieder an, und Jarvis zeigt eingereiht, empfangen, bearbeitet oder nicht zustellbar mit Grund."},
+    {"versionCode": 961, "versionName": "1.8.950", "stand": "24.11.2026, 10:57 Uhr", "notiz": "Die Funktionsliste beschreibt die neue Jarvis-Verteilung, die Jarvis auf HP-Laptop, Power-PC und Mac über die Update-Zentralen aktuell hält."}
 ]
 }

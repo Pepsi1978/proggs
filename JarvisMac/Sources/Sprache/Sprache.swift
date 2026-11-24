@@ -648,7 +648,16 @@ import Observation
 @MainActor @Observable final class SprachSchleife {
     static let shared = SprachSchleife()
     enum Zustand: String { case aus, hoert, denkt, spricht }
-    private(set) var zustand: Zustand = .aus { didSet { if zustand != oldValue { AppSteuerung.shared.pilleAbgleichen() } } }
+
+    /// Live-Zustand für die Jarvis-Verteilung der Update-Zentrale (Werkzeuge/jarvis-verteilung): Solange hier nicht „aus“ steht und
+    /// der Prozess lebt, installiert sie nichts und startet keine Portierungssitzung, damit ein Live-Gespräch nie unterbrochen wird.
+    nonisolated static func liveStatusSchreiben(_ z: Zustand) {
+        let f = ISO8601DateFormatter()
+        f.timeZone = .current
+        let text = "{\"zustand\":\"\(z.rawValue)\",\"pid\":\(ProcessInfo.processInfo.processIdentifier),\"zeit\":\"\(f.string(from: Date()))\"}"
+        try? text.write(to: Pfade.unterstuetzung.appendingPathComponent("live.json"), atomically: true, encoding: .utf8)
+    }
+    private(set) var zustand: Zustand = .aus { didSet { if zustand != oldValue { AppSteuerung.shared.pilleAbgleichen(); Self.liveStatusSchreiben(zustand) } } }
     private(set) var gespraech: Gespraech?
     private var aufgabe: Task<Void, Never>?
     private var lauf = 0

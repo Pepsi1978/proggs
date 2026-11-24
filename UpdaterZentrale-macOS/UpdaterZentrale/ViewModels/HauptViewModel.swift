@@ -19,7 +19,8 @@ final class HauptViewModel {
         "brew": BrewAktualisierer(),
         "cli": CliAktualisierer(),
         "reposkript": RepoSkriptAktualisierer(),
-        "opencodesitzung": OpenCodeSitzungAktualisierer()
+        "opencodesitzung": OpenCodeSitzungAktualisierer(),
+        "jarvisverteilung": JarvisVerteilungAktualisierer()
     ]
 
     /// Wird nach jeder Aenderung gefeuert, die das Fenster neu zeichnen muss.

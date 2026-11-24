@@ -31,7 +31,8 @@ public sealed partial class HauptViewModel : ObservableObject
             ["msstore"] = new StoreAktualisierer(),   // Altname aus früheren Katalogfassungen
             ["reposkript"] = new RepoSkriptAktualisierer(),
             ["opencodefix"] = new OpenCodeFixAktualisierer(),
-            ["opencodesitzung"] = new OpenCodeSitzungAktualisierer()
+            ["opencodesitzung"] = new OpenCodeSitzungAktualisierer(),
+            ["jarvisverteilung"] = new JarvisVerteilungAktualisierer()
         };
 
     public HauptViewModel()

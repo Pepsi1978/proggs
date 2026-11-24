@@ -61,6 +61,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Providers/CliAktualisierer.swift"
     "$SRC_DIR/Providers/RepoSkriptAktualisierer.swift"
     "$SRC_DIR/Providers/OpenCodeSitzungAktualisierer.swift"
+    "$SRC_DIR/Providers/JarvisVerteilungAktualisierer.swift"
     "$SRC_DIR/Services/UpdateKette.swift"
     "$SRC_DIR/ViewModels/ProgrammViewModel.swift"
     "$SRC_DIR/ViewModels/Sammelplan.swift"

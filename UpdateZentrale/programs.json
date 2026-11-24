@@ -513,6 +513,19 @@
       "akzent": "#22C55E"
     },
     {
+      "id": "jarvis",
+      "name": "Jarvis (HP, Power-PC, Mac)",
+      "gruppe": "Eigene Werkzeuge",
+      "beschreibung": "Jarvis-Desktop auf allen drei Rechnern aktuell halten. Prüft Änderungen von Windows, Mac, Handy und Tablet auf Portierbarkeit, startet nötige Portierungen samt Review und Tests im Hintergrund und installiert nur freigegebene Stände.",
+      "art": "jarvisverteilung",
+      "prozesse": [],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Läuft auch ohne Fenster alle 30 Minuten (Hintergrundaufgabe JarvisVerteilung). Während eines Live-Sprachgesprächs wird nichts installiert und keine Sitzung gestartet. Scheitert eine Installation, bleibt die letzte funktionierende Version.",
+      "akzent": "#F97316"
+    },
+    {
       "id": "bionic",
       "name": "Bionic",
       "gruppe": "KI-Anwendungen",

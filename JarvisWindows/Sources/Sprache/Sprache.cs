@@ -1285,6 +1285,22 @@ public sealed class WeckUebergabe
 /// <summary>Zustand der Sprachschleife (`SprachSchleife.Zustand` in Swift; in C# kann der Typ nicht so heißen wie die Eigenschaft).</summary>
 public enum SprachZustand { Aus, Hoert, Denkt, Spricht }
 
+/// <summary>Live-Zustand für die Jarvis-Verteilung der Update-Zentrale (Werkzeuge/jarvis-verteilung): Solange hier nicht „aus“ steht
+/// und der Prozess lebt, installiert sie nichts und startet keine Portierungssitzung, damit ein Live-Gespräch nie unterbrochen wird.</summary>
+public static class LiveStatusDatei
+{
+    public static void Schreiben(SprachZustand zustand)
+    {
+        try
+        {
+            var text = "{\"zustand\":\"" + zustand.ToString().ToLowerInvariant() + "\",\"pid\":" + Environment.ProcessId
+                       + ",\"zeit\":\"" + DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:sszzz") + "\"}";
+            File.WriteAllText(Path.Combine(Pfade.Unterstuetzung, "live.json"), text);
+        }
+        catch (Exception) { }
+    }
+}
+
 /// <summary>Der Gesprächsmodus wie am Handy (SprechEnde.kt): Piepton, zuhören bis zur eingestellten Stillezeit nach dem letzten Wort, Jarvis, vorlesen, wieder von vorn.
 /// Kommt nach dem Piepton nichts (7 Sekunden, ab der zweiten Runde 9), ist Schluss, ebenso bei einem Ausbefehl.</summary>
 public sealed class SprachSchleife : Beobachtbar
@@ -1294,7 +1310,7 @@ public sealed class SprachSchleife : Beobachtbar
     public SprachZustand Zustand
     {
         get => _zustand;
-        private set { if (Setze(ref _zustand, value)) AppSteuerung.Shared.PilleAbgleichen(); }
+        private set { if (Setze(ref _zustand, value)) { AppSteuerung.Shared.PilleAbgleichen(); LiveStatusDatei.Schreiben(value); } }
     }
     private Gespraech? _gespraech;
     public Gespraech? Gespraech { get => _gespraech; private set => Setze(ref _gespraech, value); }

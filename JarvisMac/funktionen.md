@@ -76,3 +76,4 @@ Was Jarvis für macOS kann (geprüft am Code).
 
 ## Entfernt in 1.0.37
 - Einstellungsbereich Programmierung mit Sessions-Liste und Formularen für Rückfrage und Nachtrag; Mac-Gespräche mit Auftrag stehen im Leistenreiter Programmierung, Sitzungen anderer Rechner nennt Jarvis auf Nachfrage. Reiter „Neues Gespräch“. Plus-Menüpunkt „OpenLauncher-Session hier am Mac“. In der Zentrale Begrüßung, Datum, Sprechblase und Schnellverknüpfungen.
+- Automatische Aktualisierung (ab 1.0.83): Die Jarvis-Verteilung der Update-Zentrale (`Werkzeuge/jarvis-verteilung`) baut und installiert neue freigegebene Fassungen selbst, mit Sicherung und Wiederherstellung, und portiert Änderungen der anderen Plattformen nach Prüfung, Review und Tests. Die App schreibt dafür ihren Sprachzustand nach `live.json`; während eines Live-Gesprächs wartet jede Installation.

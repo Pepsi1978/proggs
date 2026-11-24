@@ -1,0 +1,45 @@
+{
+  "hinweis": "Regeln der Jarvis-Verteilung (jarvis_verteilung.py). basis: ältester Commit, ab dem Portierungen verbucht werden. quellen: Ordner je Ursprungsplattform. nichtPortieren: Dateimuster (fnmatch, * passt auch über /), die nie eine Portierung brauchen; besteht ein Commit nur aus solchen Dateien, wird er ohne CLI mit Grund übersprungen.",
+  "basis": "eea21dd4bec83624186918b1020fac4eded736b5",
+  "quellen": {
+    "mobil": ["Jarvis/app/"],
+    "windows": ["JarvisWindows/"],
+    "mac": ["JarvisMac/"]
+  },
+  "plattformen": {
+    "windows": { "name": "Windows", "ordner": "JarvisWindows/", "ziele": ["hp", "power"] },
+    "mac": { "name": "macOS", "ordner": "JarvisMac/", "ziele": ["mac"] }
+  },
+  "ziele": {
+    "hp": { "name": "Windows-HP-Laptop", "plattform": "windows" },
+    "power": { "name": "Windows-Power-PC", "plattform": "windows" },
+    "mac": { "name": "Mac", "plattform": "mac" }
+  },
+  "nichtPortieren": [
+    { "muster": "Jarvis/app/src/main/assets/versionslog.json", "grund": "nur Versionslog" },
+    { "muster": "*.md", "grund": "nur Doku" },
+    { "muster": "JarvisWindows/JarvisWindows.csproj", "grund": "nur Versionsnummer/Projektdatei" },
+    { "muster": "JarvisMac/Info.plist", "grund": "nur Versionsnummer" },
+    { "muster": "JarvisWindows/publish.ps1", "grund": "Windows-Installationsweg" },
+    { "muster": "JarvisWindows/tools/*", "grund": "Windows-Hilfsskript" },
+    { "muster": "JarvisMac/build.sh", "grund": "Mac-Bauweg" },
+    { "muster": "JarvisMac/tools/*", "grund": "Mac-Hilfsskript" },
+    { "muster": "JarvisMac/Sources/ObjC/*", "grund": "Mac-Systemanbindung (Objective-C)" },
+    { "muster": "Jarvis/app/build.gradle.kts", "grund": "Android-Bauweg" },
+    { "muster": "Jarvis/app/proguard*", "grund": "Android-Bauweg" },
+    { "muster": "Jarvis/app/src/main/AndroidManifest.xml", "grund": "Android-Manifest (rein mobil)" },
+    { "muster": "Jarvis/app/src/main/res/*", "grund": "Android-Ressourcen (rein mobil)" },
+    { "muster": "Jarvis/app/src/main/java/de/frank/jarvis/tunnel/*", "grund": "WireGuard-Tunnel des Handys (rein mobil)" },
+    { "muster": "Jarvis/app/src/test/*", "grund": "Android-Tests" },
+    { "muster": "Jarvis/app/src/androidTest/*", "grund": "Android-Tests" }
+  ],
+  "claimStunden": 8,
+  "maxVersuche": 2,
+  "maxJeAuftrag": 8,
+  "launcher": {
+    "profil": "minimal",
+    "modus": "normal",
+    "modell": "claude-opus-5-5[1m]",
+    "effort": "high"
+  }
+}

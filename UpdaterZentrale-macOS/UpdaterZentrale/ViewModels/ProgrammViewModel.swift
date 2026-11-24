@@ -71,6 +71,7 @@ final class ProgrammViewModel {
         case "cli": return "Selbst-Update"
         case "reposkript": return "Eigenes Skript"
         case "opencodesitzung": return "OpenLauncher-Sitzung"
+        case "jarvisverteilung": return "Jarvis-Verteilung"
         default: return eintrag.art
         }
     }
@@ -733,6 +734,8 @@ final class ProgrammViewModel {
             return "bash " + (eintrag.skript ?? "") + " " + (eintrag.skriptArgumente ?? "")
         case "opencodesitzung":
             return OpenCodeSitzungAktualisierer.befehlsbeschreibung
+        case "jarvisverteilung":
+            return "python3 Werkzeuge/jarvis-verteilung/jarvis_verteilung.py installieren"
         default:
             return eintrag.art
         }
