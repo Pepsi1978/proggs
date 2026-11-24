@@ -116,7 +116,7 @@ fun Zeitleiste(
     val kompakt = remember(termine, vonEinst, bisEinst, auto, luecken, jetztHeute) { Zeitband.fuer(termine, vonEinst, bisEinst, auto, luecken, jetztHeute) }
     // „Ganzer Tag“ zeigt nie weniger als „Kompakt“ (die Automatik reicht eine Stunde über die Termine hinaus).
     val ganz = remember(termine, vonEinst, bisEinst, kompakt) {
-        Zeitband.ganzerTag(termine, vonEinst, bisEinst).let { Zeitband(minOf(it.vonMin, kompakt.vonMin), maxOf(it.bisMin, kompakt.bisMin)) }
+        Zeitband.ganzerTag(termine, vonEinst, bisEinst).let { Zeitband(minOf(it.vonMin, kompakt.vonMin), maxOf(it.bisMin, kompakt.bisMin), dehnungen = it.dehnungen) }
     }
     // Beim Ziehen genau die eingestellte Spanne: Darauf rechnet ZiehZustand (ziehSpanne) den Ausgleich beim Ziehstart.
     val band = when {
@@ -237,19 +237,31 @@ private fun Leiste(
                 Modifier.offset(x = SPALTE + 2.dp, y = obenDp + yDp(l.von) + 4.dp).width(flaeche - 4.dp).height(LUECKE - 8.dp),
             )
         }
-        // Termine, Überlappungen nebeneinander
+        // Termine: Dicht liegende Startzeiten dehnt das Band (Zeitband.dehnungen), die Karten stehen dann untereinander.
+        // Was sich trotzdem noch überdeckt (gleiche Startzeit, beim Ziehen das ungedehnte Band), steht nebeneinander —
+        // nur innerhalb dieser Gruppe; alle anderen Karten behalten die volle Breite.
         val sortiert = termine.sortedBy { it.minuten }
-        val spalten = mutableListOf<Int>()
         val spalteVon = HashMap<Long, Int>()
-        // Spalten nach der sichtbaren Ausdehnung: Die Karte reicht eine halbe Kartenhöhe vor und nach ihrer Startzeit.
-        sortiert.forEach { a ->
-            val start = a.minuten ?: 0
-            val halb = Zeitband.halbeKarte(a.dauer)
-            val i = spalten.indexOfFirst { it <= start - halb }.let { if (it < 0) { spalten.add(Int.MIN_VALUE); spalten.lastIndex } else it }
-            spalten[i] = start + halb
-            spalteVon[a.id] = i
+        val spaltenVon = HashMap<Long, Int>()
+        run {
+            fun mitte(a: Aufgabe) = yDp((a.minuten ?: vonMin).coerceIn(vonMin, bisMin)).value
+            val nachOben = sortiert.sortedBy { mitte(it) - karteHoehe(it.dauer).value / 2 }
+            val spalten = mutableListOf<Float>() // Unterkante der letzten Karte je Spalte in der laufenden Gruppe
+            val gruppe = mutableListOf<Long>()
+            var gruppeEnde = Float.NEGATIVE_INFINITY
+            fun abschliessen() { gruppe.forEach { spaltenVon[it] = spalten.size.coerceAtLeast(1) }; gruppe.clear(); spalten.clear() }
+            nachOben.forEach { a ->
+                val h = karteHoehe(a.dauer).value
+                val oben = mitte(a) - h / 2
+                if (oben >= gruppeEnde - 0.5f) abschliessen()
+                val i = spalten.indexOfFirst { it <= oben + 0.5f }.let { if (it < 0) { spalten.add(0f); spalten.lastIndex } else it }
+                spalten[i] = oben + h
+                spalteVon[a.id] = i
+                gruppe.add(a.id)
+                gruppeEnde = maxOf(gruppeEnde, oben + h)
+            }
+            abschliessen()
         }
-        val nSpalten = spalten.size.coerceAtLeast(1)
         // Gelber Startzeit-Strich, äußerer Teil: vom Zeitpfeil waagerecht bis an die Karte, genau auf Höhe ihrer Mitte
         // (= Startzeit). Unter den Karten gezeichnet, damit er nie quer über eine Karte links daneben läuft; das Stück in
         // der Karte bis zur Uhrzeit zeichnet TerminBlock selbst.
@@ -259,8 +271,9 @@ private fun Leiste(
                 val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
                 val y = obenPx + band.y(min, stundePx, lueckePx)
                 val sp = spalteVon[a.id] ?: 0
+                val n = spaltenVon[a.id] ?: 1
                 val farbe = strichFarbe(f.dunkel, a, zustand)
-                drawLine(farbe, Offset(x, y), Offset((SPALTE + flaeche / nSpalten * sp).toPx() + 2.dp.toPx(), y), 2.5.dp.toPx(), StrokeCap.Round)
+                drawLine(farbe, Offset(x, y), Offset((SPALTE + flaeche / n * sp).toPx() + 2.dp.toPx(), y), 2.5.dp.toPx(), StrokeCap.Round)
                 drawCircle(farbe, 4.5.dp.toPx(), Offset(x, y))
             }
         }
@@ -270,9 +283,10 @@ private fun Leiste(
             val h = karteHoehe(a.dauer)
             val oben = obenDp + yDp(min) - h / 2
             val sp = spalteVon[a.id] ?: 0
+            val n = spaltenVon[a.id] ?: 1
             Box(
-                Modifier.offset(x = SPALTE + flaeche / nSpalten * sp, y = oben)
-                    .width(flaeche / nSpalten - 4.dp).height(h)
+                Modifier.offset(x = SPALTE + flaeche / n * sp, y = oben)
+                    .width(flaeche / n - 4.dp).height(h)
                     // Gemeldet wird die Kartenmitte: Sie liegt auf der Zeitlinie, an der beim Loslassen abgelegt wurde.
                     .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y + it.size.height / 2f) },
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }

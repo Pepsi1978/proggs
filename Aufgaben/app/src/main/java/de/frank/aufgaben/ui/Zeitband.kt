@@ -8,14 +8,27 @@ data class Luecke(val von: Int, val bis: Int) {
 }
 
 /**
+ * Gedehnter Abschnitt der Zeitleiste: Zwei Termine starten so dicht hintereinander, dass sich ihre Karten (mittig auf der
+ * Startzeit) verdecken würden. Die Minuten von [von] bis [bis] sind dort [faktor]-mal so hoch wie normal; sonst nichts.
+ */
+data class Dehnung(val von: Int, val bis: Int, val faktor: Float)
+
+/**
  * Was eine Zeitleiste zeigt: von–bis in Minuten, freie Lücken auf eine feste Höhe zusammengerückt. Außerhalb der Lücken
  * ist eine Stunde [stunde] hoch, jede Lücke [luecke]; die Minuten darin verteilen sich gleichmäßig auf diese Höhe.
+ * Abschnitte mit dicht liegenden Terminen sind um [dehnungen] gestreckt, alle anderen Stunden behalten ihre Höhe.
  * Raster, Termine, Jetzt-Linie und Ziehen rechnen alle hierüber, darum passen sie immer zusammen.
  */
-data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> = emptyList()) {
+data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> = emptyList(), val dehnungen: List<Dehnung> = emptyList()) {
 
     /** Höhe von [vonMin] bis [min]. */
-    fun y(min: Float, stunde: Float, luecke: Float): Float {
+    fun y(min: Float, stunde: Float, luecke: Float): Float = ohneDehnung(min, stunde, luecke) + zusatz(min, stunde) - zusatz(vonMin.toFloat(), stunde)
+
+    /** Zusätzliche Höhe aller Dehnungen vor [min] (Dehnungen liegen nie in einer Lücke: dort ist kein Termin). */
+    private fun zusatz(min: Float, stunde: Float): Float =
+        dehnungen.sumOf { d -> ((min.coerceIn(d.von.toFloat(), d.bis.toFloat()) - d.von) * (d.faktor - 1f)).toDouble() }.toFloat() / 60f * stunde
+
+    private fun ohneDehnung(min: Float, stunde: Float, luecke: Float): Float {
         var y = 0f
         var t = vonMin.toFloat()
         for (l in luecken) {
@@ -32,6 +45,15 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
 
     /** Umkehrung von [y]: Minute an der Höhe [px] unter dem Bandanfang. */
     fun minute(px: Float, stunde: Float, luecke: Float): Float {
+        if (dehnungen.isEmpty()) return minuteOhneDehnung(px, stunde, luecke)
+        // y steigt streng: halbieren. Außerhalb des Bands läuft y linear weiter, der Bereich reicht weit darüber hinaus.
+        var lo = vonMin - 48f * 60f
+        var hi = bisMin + 48f * 60f
+        repeat(40) { val m = (lo + hi) / 2f; if (y(m, stunde, luecke) < px) lo = m else hi = m }
+        return (lo + hi) / 2f
+    }
+
+    private fun minuteOhneDehnung(px: Float, stunde: Float, luecke: Float): Float {
         var y = 0f
         var t = vonMin.toFloat()
         for (l in luecken) {
@@ -54,6 +76,32 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
         luecken.sumOf { it.minuten } + (vonMin - von).coerceAtLeast(0) + (bis - bisMin).coerceAtLeast(0)
 
     companion object {
+        /** Startzeiten näher als so viele Minuten stehen in einer Reihe nebeneinander statt untereinander. */
+        const val GLEICHE_REIHE = 5
+
+        /** Abstand zwischen zwei untereinander stehenden Karten, in Minuten bei normaler Stundenhöhe (≈ 3 dp). */
+        private const val KARTEN_ABSTAND = 4
+
+        /**
+         * Dehnt die Abschnitte zwischen zwei Startzeiten, deren Karten sich sonst verdecken: Die Karten stehen mittig auf
+         * ihrer Startzeit, zwei aufeinanderfolgende brauchen also mindestens eine halbe Kartenhöhe der einen plus eine der
+         * anderen Abstand. Gestreckt wird nur die Strecke zwischen den beiden Startzeiten, so weit wie nötig. Startzeiten,
+         * die fast gleich sind ([GLEICHE_REIHE]), bilden eine Reihe; ihre Karten stehen nebeneinander.
+         */
+        fun dehnungen(termine: List<Aufgabe>): List<Dehnung> {
+            val reihen = mutableListOf<Pair<Int, Int>>() // Startzeit der Reihe, größte halbe Kartenhöhe darin
+            termine.mapNotNull { t -> t.minuten?.let { it to halbeKarte(t.dauer) } }.sortedBy { it.first }.forEach { (start, halb) ->
+                val letzte = reihen.lastOrNull()
+                if (letzte != null && start - letzte.first < GLEICHE_REIHE) reihen[reihen.lastIndex] = letzte.first to maxOf(letzte.second, halb)
+                else reihen.add(start to halb)
+            }
+            return reihen.zipWithNext().mapNotNull { (a, b) ->
+                val noetig = a.second + b.second + KARTEN_ABSTAND
+                val da = b.first - a.first
+                if (da >= noetig) null else Dehnung(a.first, b.first, noetig.toFloat() / da)
+            }
+        }
+
         /** Kürzeste Lücke, die zusammenrückt: Bei weniger als zwei freien Stunden verschwände keine Stundenzahl. */
         const val MIN_LUECKE = 120
 
@@ -83,7 +131,8 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             // Die Karte steht mittig auf ihrer Startzeit: Belegt ist also auch die halbe Kartenhöhe davor, sonst schöbe sie
             // sich über die „… frei“-Marke einer Lücke direkt darüber.
             val strecken = termine.mapNotNull { t -> t.minuten?.let { val halb = halbeKarte(t.dauer); (it - halb) to it + maxOf(t.dauer, halb) } } + listOfNotNull(jetzt?.let { it to it + 1 })
-            if (!luecken || strecken.size < 2) return Zeitband(a, b)
+            val dehnungen = dehnungen(termine)
+            if (!luecken || strecken.size < 2) return Zeitband(a, b, dehnungen = dehnungen)
             // Termine zu belegten Strecken verschmelzen, sortiert und überlappungsfrei.
             val belegt = mutableListOf<IntArray>()
             strecken
@@ -100,7 +149,7 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             val liste = belegt.zipWithNext { vorher, danach ->
                 Luecke(((vorher[1] + 59) / 60 * 60).coerceAtLeast(ersteStunde), (danach[0] / 60 * 60).coerceAtMost(letzteStunde))
             }.filter { it.minuten >= MIN_LUECKE }
-            return Zeitband(a, b, liste)
+            return Zeitband(a, b, liste, dehnungen)
         }
 
         /**
@@ -116,7 +165,7 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             val obenFrei = termine.minOf { t -> t.minuten?.let { it - halbeKarte(t.dauer) } ?: erster }
             val a = minOf(von, Math.floorDiv(obenFrei, 60) * 60).coerceAtLeast(0)
             val b = maxOf(bis, (letzter + 59) / 60 * 60).coerceAtMost(24 * 60)
-            return Zeitband(a, b)
+            return Zeitband(a, b, dehnungen = dehnungen(termine))
         }
 
         private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, jetzt: Int?): Pair<Int, Int> {
