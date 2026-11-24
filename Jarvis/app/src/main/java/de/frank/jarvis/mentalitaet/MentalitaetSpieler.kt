@@ -15,7 +15,6 @@ import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.SprechText
 import de.frank.jarvis.speech.Synthese
 import de.frank.jarvis.speech.SyntheseAbbruch
-import de.frank.jarvis.speech.SyntheseZeitlimit
 import de.frank.jarvis.speech.VorleseDienst
 import de.frank.jarvis.speech.VorleseZustand
 import de.frank.jarvis.speech.Vorleser
@@ -34,6 +33,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -66,6 +66,10 @@ data class MentalSpielStand(
     val durchlauf: Int = 0,
     val pauseSekunden: Int = STANDARD_PAUSE_SEKUNDEN,
     val fehler: String? = null,
+    /** Vom Pause-/Weiter-Knopf angehalten; die Phase bleibt dabei erhalten. */
+    val pausiert: Boolean = false,
+    /** Die Stimme kommt wegen Netzproblemen nicht oder nur langsam; der Satz wird wiederholt angefragt. */
+    val internetProbleme: Boolean = false,
 ) {
     val laeuft: Boolean get() = phase != MentalPhase.AUS
 }
@@ -145,7 +149,11 @@ internal suspend fun mentalitaetSchleife(
     pauseMsAbrufen: () -> Long = { pauseMs },
     pausenTaktMs: Long = Long.MAX_VALUE,
     stabilMs: Long = 1_000L,
-    maxFehlerInFolge: Int = 3,
+    maxFehlerInFolge: Int = 6,
+    langsamMs: Long = 8_000L,
+    wiederholungMs: (Int) -> Long = { versuch -> minOf(8_000L, 1_000L shl (versuch - 1).coerceIn(0, 3)) },
+    istNetzFehler: (Throwable) -> Boolean = { it is IOException },
+    beiInternet: (Boolean) -> Unit = {},
     vorSchritt: suspend () -> Unit = {},
     vorAbspielen: suspend () -> Unit = {},
     erzeuge: suspend (String) -> File,
@@ -216,6 +224,7 @@ internal suspend fun mentalitaetSchleife(
 
         try {
             var fehlerInFolge = 0
+            var versuche = 0
             var durchlauf = 1
             while (isActive) {
                 vorSchritt()
@@ -237,6 +246,7 @@ internal suspend fun mentalitaetSchleife(
                 kandidatMs = 0L
                 // „Lädt“ nur, solange die Ausgabe noch nicht fertig bereitliegt; Änderungen greifen auch hier noch.
                 var ladenGezeigt = false
+                var geladenMs = 0L
                 while (!v!!.ergebnis.isCompleted) {
                     if (!ladenGezeigt) {
                         ladenGezeigt = true
@@ -245,6 +255,9 @@ internal suspend fun mentalitaetSchleife(
                     }
                     withTimeoutOrNull(takt) { v!!.ergebnis.join() }
                     if (v!!.ergebnis.isCompleted) break
+                    geladenMs += takt
+                    // Dauert die Vorbereitung ungewöhnlich lange, ist meist das Netz schuld: sichtbar machen, weiter warten.
+                    if (geladenMs >= langsamMs) beiInternet(true)
                     val neuPlan = planAbrufen()
                     if (neuPlan.isEmpty()) continue
                     val (i2, n2) = mentalitaetNaechster(neuPlan, letzterPlan, letzter)
@@ -261,38 +274,46 @@ internal suspend fun mentalitaetSchleife(
                         ladenGezeigt = false
                     }
                 }
-                if (neuerDurchlauf) durchlauf++
                 val ergebnis = v!!.ergebnis.await()
                 vorab = null
 
+                val datei = ergebnis.getOrNull()
+                if (datei == null) {
+                    // Nicht erzeugt: denselben Schritt erneut anfragen statt ihn zu überspringen. Die Pause verlängert sich
+                    // dadurch von selbst (die eingestellte Grundpause bleibt unverändert). Netzfehler zählen nicht als Fehlversuch.
+                    val grund = ergebnis.exceptionOrNull()
+                    if (grund is CancellationException) throw grund
+                    if (grund is SyntheseAbbruch) throw grund
+                    if (grund != null) beiFehler(grund)
+                    val netz = grund != null && istNetzFehler(grund)
+                    if (netz) beiInternet(true) else fehlerInFolge++
+                    if (fehlerInFolge >= maxFehlerInFolge) {
+                        throw IllegalStateException(
+                            grund?.message ?: "Die Stimme konnte nicht erzeugt werden. Prüf die Internetverbindung.",
+                        )
+                    }
+                    versuche++
+                    beiStand(MentalPhase.LAEDT, schritt, if (neuerDurchlauf) durchlauf + 1 else durchlauf, index, aktPlan.size)
+                    pause(wiederholungMs(versuche))
+                    continue
+                }
+                versuche = 0
+                fehlerInFolge = 0
+                if (neuerDurchlauf) durchlauf++
                 letzter = schritt
                 letzterPlan = aktPlan
-                val datei = ergebnis.getOrNull()
                 try {
                     // Nächste Ausgabe schon während dieses Satzes frisch vorbereiten.
                     vorabAbgleichen(0L)
 
-                    if (datei == null) {
-                        val grund = ergebnis.exceptionOrNull()
-                        if (grund is CancellationException) throw grund
-                        if (grund is SyntheseAbbruch) throw grund
-                        fehlerInFolge++
-                        if (grund != null) beiFehler(grund)
-                        if (fehlerInFolge >= maxFehlerInFolge) {
-                            throw IllegalStateException(
-                                grund?.message ?: "Die Stimme konnte nicht erzeugt werden. Prüf die Internetverbindung.",
-                            )
-                        }
-                    } else {
-                        fehlerInFolge = 0
-                        vorAbspielen()
-                        currentCoroutineContext().ensureActive()
-                        beiStand(MentalPhase.SPRICHT, schritt, durchlauf, index, aktPlan.size)
-                        spiele(datei)
-                    }
+                    vorAbspielen()
+                    currentCoroutineContext().ensureActive()
+                    beiInternet(false)
+                    beiStand(MentalPhase.SPRICHT, schritt, durchlauf, index, aktPlan.size)
+                    spiele(datei)
                 } finally {
                     // Einmal gespielt → sofort löschen, nie erneut abspielen.
-                    datei?.let { runCatching { loesche(it) } }
+                    runCatching { loesche(datei) }
                 }
 
                 // Eingestellte Pause zwischen je zwei Ausgaben, live nachgeführt: jede Änderung der Dauer gilt sofort,
@@ -331,7 +352,7 @@ internal suspend fun mentalitaetSchleife(
  */
 object MentalitaetSpieler {
     const val PAUSE_MS = 5_000L
-    private const val NETZ_WIEDERHOLUNG_MS = 500L
+    private const val PAUSE_STUECK_MS = 50L
     private const val PAUSEN_TAKT_MS = 200L
     private const val FOKUS_PRUEF_MS = 150L
     private const val WACH_MS = 5 * 60_000L
@@ -339,6 +360,8 @@ object MentalitaetSpieler {
     /** Schützt einen MediaPlayer vor doppeltem Freigeben bei gleichzeitigem Stopp und Abschluss. */
     private class AktiverSpieler(val mp: MediaPlayer) {
         private val geschlossen = AtomicBoolean(false)
+        /** Fertig abgespielt: Ein Weiter darf ihn dann nicht noch einmal starten. */
+        @Volatile var fertig = false
         fun schliessen() {
             if (!geschlossen.compareAndSet(false, true)) return
             SpeechLoudness.release(mp)
@@ -366,6 +389,17 @@ object MentalitaetSpieler {
     private var wach: PowerManager.WakeLock? = null
     private var pausiertDurchFokus = false
 
+    /** Vom Pause-/Weiter-Knopf angehalten (unabhängig von einer Pause durch den Tonfokus). */
+    private val manuellPausiert = MutableStateFlow(false)
+    @Volatile private var internetProbleme = false
+    private var letzteNummer = 1
+    private var letzteGesamt = 1
+
+    val pausiert: Boolean get() = manuellPausiert.value
+
+    /** Darf der Ton gerade laufen? Gemeinsames Tor für Pause-Knopf und Tonfokus. */
+    private fun darfSpielen() = !pausiertDurchFokus && !manuellPausiert.value
+
     private fun synthese(app: Context): Synthese =
         syntheseInstanz ?: synchronized(this) {
             syntheseInstanz ?: Synthese(app, SecureSettings.get(app)).also { syntheseInstanz = it }
@@ -387,6 +421,10 @@ object MentalitaetSpieler {
         val app = context.applicationContext
         appContext = app
         stoppIntern(fehler = null, dienstBeenden = false)
+        manuellPausiert.value = false
+        internetProbleme = false
+        letzteNummer = 1
+        letzteGesamt = plan.size
 
         // Andere laufende Sprachausgaben in Jarvis beenden, damit sich nichts überlagert.
         runCatching { Vorleser.aktuell()?.stopp(dienstBeenden = false) }
@@ -438,10 +476,31 @@ object MentalitaetSpieler {
                     },
                     pausenTaktMs = PAUSEN_TAKT_MS,
                     vorSchritt = { wachErneuern(app) },
-                    vorAbspielen = { warteBeiFokusPause(meinLauf) },
+                    vorAbspielen = {
+                        warteWennPausiert()
+                        warteBeiFokusPause(meinLauf)
+                    },
                     erzeuge = { text -> erzeugeFrischFuerLauf(syn, bereiteTextAuf(text), meinLauf) },
                     spiele = { datei -> spieleDatei(app, datei, meinLauf) },
                     loesche = { datei -> datei.delete() },
+                    // Satzpause in kleinen Stücken; angehalten zählt keine Zeit, sodass sie genau dort weiterläuft.
+                    pause = { ms ->
+                        var rest = ms
+                        while (rest > 0L) {
+                            warteWennPausiert()
+                            val stueck = minOf(rest, PAUSE_STUECK_MS)
+                            delay(stueck)
+                            rest -= stueck
+                        }
+                    },
+                    beiInternet = { problem ->
+                        if (laufNummer.get() == meinLauf && internetProbleme != problem) {
+                            internetProbleme = problem
+                            if (problem) Logbuch.netz("Mentalität: Internetprobleme", "Stimme kommt nicht oder langsam, Satz wird erneut angefragt")
+                            val s = _stand.value
+                            if (s.laeuft) _stand.value = s.copy(internetProbleme = problem)
+                        }
+                    },
                     beiStand = { phase, schritt, durchlauf, schrittIndex, planGroesse ->
                         if (laufNummer.get() == meinLauf) {
                             _stand.value = MentalSpielStand(
@@ -451,11 +510,14 @@ object MentalitaetSpieler {
                                 wiederholungenGesamt = schritt.wiederholungenGesamt,
                                 durchlauf = durchlauf,
                                 pauseSekunden = aktuellePauseSekunden,
+                                pausiert = manuellPausiert.value,
+                                internetProbleme = internetProbleme,
                             )
                             if (phase == MentalPhase.SPRICHT) {
+                                letzteNummer = schrittIndex + 1
+                                letzteGesamt = planGroesse.coerceAtLeast(schrittIndex + 1)
                                 VorleseDienst.aktualisiere(
-                                    app, "Mentalität", schrittIndex + 1,
-                                    planGroesse.coerceAtLeast(schrittIndex + 1), pausiert = false,
+                                    app, "Mentalität", letzteNummer, letzteGesamt, pausiert = manuellPausiert.value,
                                 )
                             }
                         }
@@ -498,6 +560,43 @@ object MentalitaetSpieler {
         }
     }
 
+    /**
+     * Hält die laufende Session genau an der aktuellen Stelle an: mitten im Satz (der Player pausiert),
+     * in der Satzpause (die Restzeit bleibt) oder beim Laden (der fertige Satz startet erst nach Weiter).
+     */
+    fun pausieren() {
+        if (Looper.myLooper() != Looper.getMainLooper()) { haupt.post { pausieren() }; return }
+        if (!aktiv || manuellPausiert.value) return
+        manuellPausiert.value = true
+        aktiverSpieler?.mp?.let { runCatching { if (it.isPlaying) it.pause() } }
+        _stand.value = _stand.value.copy(pausiert = true)
+        appContext?.let { VorleseDienst.aktualisiere(it, "Mentalität", letzteNummer, letzteGesamt, pausiert = true) }
+        Logbuch.sprache("Mentalität pausiert", "phase=${_stand.value.phase}")
+    }
+
+    /** Setzt dieselbe Session an der pausierten Stelle fort. */
+    fun fortsetzen() {
+        if (Looper.myLooper() != Looper.getMainLooper()) { haupt.post { fortsetzen() }; return }
+        if (!aktiv || !manuellPausiert.value) return
+        manuellPausiert.value = false
+        val app = appContext
+        app?.let { wachErneuern(it) }
+        if (!pausiertDurchFokus) {
+            aktiverSpieler?.takeIf { !it.fertig }?.mp?.let { runCatching { if (!it.isPlaying) it.start() } }
+        }
+        _stand.value = _stand.value.copy(pausiert = false)
+        app?.let { VorleseDienst.aktualisiere(it, "Mentalität", letzteNummer, letzteGesamt, pausiert = false) }
+        Logbuch.sprache("Mentalität fortgesetzt", "phase=${_stand.value.phase}")
+    }
+
+    fun pauseUmschalten() {
+        if (manuellPausiert.value) fortsetzen() else pausieren()
+    }
+
+    private suspend fun warteWennPausiert() {
+        if (manuellPausiert.value) manuellPausiert.first { !it }
+    }
+
     fun fehlerGelesen() {
         if (_stand.value.fehler != null) {
             _stand.value = _stand.value.copy(fehler = null)
@@ -510,6 +609,8 @@ object MentalitaetSpieler {
         job?.cancel()
         job = null
         pausiertDurchFokus = false
+        manuellPausiert.value = false
+        internetProbleme = false
         spielerBeenden()
         fokusAbgeben()
         wachLos()
@@ -529,14 +630,8 @@ object MentalitaetSpieler {
 
     /** Erzeugt genau eine frische Audiodatei; verwirft sie sofort, falls der Lauf inzwischen gestoppt wurde. */
     private suspend fun erzeugeFrischFuerLauf(syn: Synthese, text: String, meinLauf: Long): File {
-        val datei = try {
-            syn.synthetisiere(text, wahl = null, frisch = true)
-        } catch (zeitlimit: SyntheseZeitlimit) {
-            throw zeitlimit
-        } catch (netz: IOException) {
-            delay(NETZ_WIEDERHOLUNG_MS)
-            syn.synthetisiere(text, wahl = null, frisch = true)
-        }
+        // Netzfehler und abgeschnittene Antworten wiederholt die Schleife selbst (gleicher Schritt, mit Anzeige).
+        val datei = syn.synthetisiere(text, wahl = null, frisch = true)
         if (laufNummer.get() != meinLauf || !currentCoroutineContext().isActive) {
             runCatching { datei.delete() }
             throw CancellationException("Mentalität-Lauf beendet")
@@ -555,6 +650,15 @@ object MentalitaetSpieler {
      * sodass Fokus-Wechsel und Stopp nie mit `prepare()` kollidieren.
      */
     private suspend fun spieleDatei(app: Context, datei: File, meinLauf: Long) {
+        // Bricht die Wiedergabe mit einem Fehler ab, wird dieselbe Datei noch einmal ganz abgespielt (sie wird erst danach gelöscht).
+        for (versuch in 1..2) {
+            if (spieleDateiEinmal(app, datei, meinLauf) || laufNummer.get() != meinLauf) return
+            Logbuch.sprache("Mentalität-Wiedergabe wiederholt", "versuch=$versuch")
+        }
+    }
+
+    /** true = vollständig abgespielt oder bewusst beendet; false = Wiedergabe vorzeitig gescheitert. */
+    private suspend fun spieleDateiEinmal(app: Context, datei: File, meinLauf: Long): Boolean {
         val lokal = AktiverSpieler(MediaPlayer())
         try {
             val vorbereitet = withContext(Dispatchers.IO) {
@@ -569,24 +673,36 @@ object MentalitaetSpieler {
                     false
                 }
             }
-            if (!vorbereitet || laufNummer.get() != meinLauf) return
+            if (!vorbereitet) return false
+            if (laufNummer.get() != meinLauf) return true
+            warteWennPausiert()
             warteBeiFokusPause(meinLauf)
-            if (laufNummer.get() != meinLauf) return
+            if (laufNummer.get() != meinLauf) return true
 
+            val dauerMs = runCatching { lokal.mp.duration }.getOrDefault(-1)
             aktiverSpieler = lokal
-            suspendCancellableCoroutine { fortsetzung ->
-                lokal.mp.setOnCompletionListener { if (fortsetzung.isActive) fortsetzung.resume(Unit) }
-                lokal.mp.setOnErrorListener { _, _, _ ->
-                    if (fortsetzung.isActive) fortsetzung.resume(Unit)
+            return suspendCancellableCoroutine { fortsetzung ->
+                lokal.mp.setOnCompletionListener {
+                    lokal.fertig = true
+                    val position = runCatching { it.currentPosition }.getOrDefault(-1)
+                    if (dauerMs > 0 && position in 0 until dauerMs - 500) {
+                        Logbuch.sprache("Mentalität-Wiedergabe endete früh", "position=${position}ms dauer=${dauerMs}ms")
+                    }
+                    if (fortsetzung.isActive) fortsetzung.resume(true)
+                }
+                lokal.mp.setOnErrorListener { _, was, extra ->
+                    lokal.fertig = true
+                    Logbuch.fehler("Mentalität-Wiedergabefehler", IllegalStateException("MediaPlayer what=$was extra=$extra"))
+                    if (fortsetzung.isActive) fortsetzung.resume(false)
                     true
                 }
                 SpeechLoudness.boost(lokal.mp)
                 if (laufNummer.get() != meinLauf) {
-                    if (fortsetzung.isActive) fortsetzung.resume(Unit)
-                } else if (!pausiertDurchFokus) {
+                    if (fortsetzung.isActive) fortsetzung.resume(true)
+                } else if (darfSpielen()) {
                     runCatching { lokal.mp.start() }.onFailure { fehler ->
                         Logbuch.fehler("Mentalität-Wiedergabefehler", fehler)
-                        if (fortsetzung.isActive) fortsetzung.resume(Unit)
+                        if (fortsetzung.isActive) fortsetzung.resume(false)
                     }
                 }
                 fortsetzung.invokeOnCancellation { lokal.schliessen() }
@@ -620,7 +736,10 @@ object MentalitaetSpieler {
                     AudioManager.AUDIOFOCUS_GAIN -> {
                         if (pausiertDurchFokus) {
                             pausiertDurchFokus = false
-                            aktiverSpieler?.mp?.let { runCatching { it.start() } }
+                            // Vom Pause-Knopf Angehaltenes bleibt angehalten.
+                            if (darfSpielen()) {
+                                aktiverSpieler?.takeIf { !it.fertig }?.mp?.let { runCatching { if (!it.isPlaying) it.start() } }
+                            }
                         }
                     }
                     AudioManager.AUDIOFOCUS_LOSS -> stopp()

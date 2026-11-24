@@ -956,6 +956,7 @@
     {"versionCode": 947, "versionName": "1.8.936", "stand": "23.11.2026, 21:02 Uhr", "notiz": "Mentalität: Das laufende Vorlesen übernimmt neue Reihenfolge, geänderte Wiederholungszahlen und eine geänderte Pause sofort ab dem nächsten Schritt, ohne Neustart."},
     {"versionCode": 948, "versionName": "1.8.937", "stand": "23.11.2026, 21:12 Uhr", "notiz": "Mentalität: Schnelles Hin- und Herschieben am Regler verbraucht keine Sprachanfragen mehr, Änderungen greifen auch während des Ladens, und die Schrittanzeige stimmt nach Änderungen."},
     {"versionCode": 949, "versionName": "1.8.938", "stand": "23.11.2026, 22:25 Uhr", "notiz": "Programmierbutton: Gemini-Modelle laufen jetzt automatisch im Antigravity CLI, die CLI-Auswahl entfällt und Jarvis fragt direkt nach dem Code-Review."},
-    {"versionCode": 950, "versionName": "1.8.939", "stand": "23.11.2026, 22:29 Uhr", "notiz": "Programmierbutton: Ältere gespeicherte Gemini-Einstiege und Karten mit OpenCode starten jetzt ebenfalls im Antigravity CLI, statt abgelehnt zu werden."}
+    {"versionCode": 950, "versionName": "1.8.939", "stand": "23.11.2026, 22:29 Uhr", "notiz": "Programmierbutton: Ältere gespeicherte Gemini-Einstiege und Karten mit OpenCode starten jetzt ebenfalls im Antigravity CLI, statt abgelehnt zu werden."},
+    {"versionCode": 951, "versionName": "1.8.940", "stand": "24.11.2026, 09:21 Uhr", "notiz": "Mentalität: Abgeschnittene Sätze werden erkannt und neu erzeugt, bei Netzproblemen erscheint „Internetprobleme“, und ein neuer Pause-/Weiter-Knopf hält die Session genau an der aktuellen Stelle an."}
 ]
 }

@@ -384,10 +384,36 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (ton != null && text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
+        // Frisch erzeugte kurze Sätze (Mentalität): Gemini bricht dort teils nach zwei Wörtern ab und meldet trotzdem STOP.
+        // Gemessen wird nur die gesprochene Strecke (Stille vorn und hinten abgezogen), sonst verdeckte sie den Abbruch.
+        val gesprochen = ton?.let { gesprocheneSekunden(it.first, it.second) }
+        if (frisch && gesprochen != null && text.length >= 12 && gesprochen < text.length / 25.0) {
+            Logbuch.netz("Gemini-Audio abgeschnitten", "zeichen=${text.length} gesprochen=${"%.2f".format(gesprochen)}s gesamt=${"%.2f".format(sekunden)}s")
+            throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(gesprochen)} s gesprochen für ${text.length} Zeichen).")
+        }
         if (!frisch && text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] = wav }
         val fertig = mitTempo(wav, tempo)
-        Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo", System.currentTimeMillis() - beginn)
+        Logbuch.sprache(
+            "Gemini-Absatz erzeugt",
+            "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo ton=${"%.2f".format(sekunden)}s" +
+                (gesprochen?.let { " gesprochen=${"%.2f".format(it)}s" } ?: ""),
+            System.currentTimeMillis() - beginn,
+        )
         return schreibeDatei(fertig, "wav")
+    }
+
+    /** Sekunden zwischen dem ersten und dem letzten hörbaren Abtastwert (PCM 16 Bit mono, Little Endian). */
+    private fun gesprocheneSekunden(pcm: ByteArray, rate: Int): Double {
+        val n = pcm.size / 2
+        if (n == 0 || rate <= 0) return 0.0
+        fun wert(i: Int) = kotlin.math.abs(((pcm[2 * i + 1].toInt() shl 8) or (pcm[2 * i].toInt() and 0xFF)).toShort().toInt())
+        val schwelle = 600
+        var anfang = 0
+        while (anfang < n && wert(anfang) < schwelle) anfang++
+        if (anfang >= n) return 0.0
+        var ende = n - 1
+        while (ende > anfang && wert(ende) < schwelle) ende--
+        return (ende - anfang + 1) / rate.toDouble()
     }
 
     /** true bei einem schlichten WAV-Kopf (44 Byte, PCM 16 Bit mono); nur den kann [mitTempo] strecken. */

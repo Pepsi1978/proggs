@@ -393,4 +393,66 @@ class MentalitaetTest {
         assertEquals(1 to false, mentalitaetNaechster(neu, alt, alt[1]))
         assertEquals(0 to true, mentalitaetNaechster(neu, alt, neu[1]))
     }
+
+    @Test
+    fun verzoegerteVorbereitungSpieltJedenSchrittVollstaendigUndInReihenfolge() = runBlocking {
+        // Erzeugung dauert länger als die Pause: Die Pause verlängert sich, kein Schritt fällt aus.
+        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 2), MentalSatz(2L, "B", 1)))
+        val gespielt = CopyOnWriteArrayList<String>()
+        val fertig = CompletableDeferred<Unit>()
+        val lauf = launch(Dispatchers.Default) {
+            mentalitaetSchleife(
+                plan = plan,
+                pauseMs = 10L,
+                pausenTaktMs = 5L,
+                erzeuge = { text ->
+                    delay(60)
+                    File.createTempFile("mental-langsam-", ".wav").apply { writeText(text) }
+                },
+                spiele = { datei ->
+                    gespielt += datei.readText()
+                    if (gespielt.size >= 6) fertig.complete(Unit)
+                },
+                loesche = { it.delete() },
+            )
+        }
+        fertig.await()
+        lauf.cancel()
+        lauf.join()
+        assertEquals(listOf("A", "A", "B", "A", "A", "B"), gespielt.take(6))
+    }
+
+    @Test
+    fun fehlgeschlageneErzeugungWiederholtDenselbenSchrittUndMeldetInternetprobleme() = runBlocking {
+        val plan = mentalitaetPlan(listOf(MentalSatz(1L, "A", 2), MentalSatz(2L, "B", 1)))
+        val gespielt = CopyOnWriteArrayList<String>()
+        val internet = CopyOnWriteArrayList<Boolean>()
+        val versuche = AtomicInteger(0)
+        val fertig = CompletableDeferred<Unit>()
+        val lauf = launch(Dispatchers.Default) {
+            mentalitaetSchleife(
+                plan = plan,
+                pauseMs = 1L,
+                wiederholungMs = { 1L },
+                beiInternet = { internet += it },
+                erzeuge = { text ->
+                    // Die zweite Wiederholung von A scheitert zweimal am Netz.
+                    val n = versuche.incrementAndGet()
+                    if (n == 2 || n == 3) throw java.io.IOException("offline")
+                    File.createTempFile("mental-netz-", ".wav").apply { writeText(text) }
+                },
+                spiele = { datei ->
+                    gespielt += datei.readText()
+                    if (gespielt.size >= 3) fertig.complete(Unit)
+                },
+                loesche = { it.delete() },
+            )
+        }
+        fertig.await()
+        lauf.cancel()
+        lauf.join()
+        assertEquals(listOf("A", "A", "B"), gespielt.take(3))
+        assertTrue(internet.contains(true))
+        assertEquals(false, internet.last())
+    }
 }

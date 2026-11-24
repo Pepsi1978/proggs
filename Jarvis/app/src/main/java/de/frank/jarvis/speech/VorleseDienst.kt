@@ -53,14 +53,14 @@ class VorleseDienst : Service() {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPause() {
                     if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
-                        de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                        de.frank.jarvis.mentalitaet.MentalitaetSpieler.pausieren()
                     } else {
                         Vorleser.aktuell()?.pause()
                     }
                 }
 
                 override fun onPlay() {
-                    Vorleser.aktuell()?.weiter()
+                    if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
                 }
 
                 override fun onStop() {
@@ -109,12 +109,12 @@ class VorleseDienst : Service() {
         when (intent?.action) {
             VorleseAktion.PAUSE -> {
                 if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
-                    de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                    de.frank.jarvis.mentalitaet.MentalitaetSpieler.pausieren()
                 } else {
                     Vorleser.aktuell()?.pause()
                 }
             }
-            VorleseAktion.WEITER -> Vorleser.aktuell()?.weiter()
+            VorleseAktion.WEITER -> if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
             VorleseAktion.STOPP -> {
                 Vorleser.aktuell()?.stopp()
                 de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
