@@ -240,15 +240,22 @@ def wecke(tty: str) -> str:
         return "das Wecken der Sitzung schlug fehl"
 
 
-def melde_problem(ids: list[str], grund: str) -> None:
+def melde_problem(ids: list[str], grund: str, versuche: int = 3) -> bool:
     """Sagt Jarvis klar, dass diese Nachträge (noch) nicht ankommen, statt sie still auf „eingereiht“ stehen zu lassen. Jarvis
-    zeigt sie dann als nicht zustellbar mit Grund; kommen sie später doch an, wechseln sie auf empfangen. Startet nie etwas neu."""
+    zeigt sie dann als nicht zustellbar mit Grund; kommen sie später doch an, wechseln sie auf empfangen. Startet nie etwas neu.
+    Als „nachtrag“ ohne nachtrag_ids, mit problem_ids: Ältere Jarvis-Fassungen ignorieren das, statt den Auftragsstand auf einen
+    unbekannten Wert zu setzen; der Relay quittiert dabei nichts. True = Jarvis hat es (200)."""
     if not ids:
-        return
-    try:
-        H.melde("nachtrag_problem", grund, nachtrag_ids=ids)
-    except Exception as fehler:
-        H.schreib(f"agy Warter: Problem-Meldung {type(fehler).__name__}: {fehler}")
+        return True
+    for versuch in range(versuche):
+        try:
+            if H.melde("nachtrag", grund, extra={"problem_ids": ids}) == 200:
+                return True
+        except Exception as fehler:
+            H.schreib(f"agy Warter: Problem-Meldung {type(fehler).__name__}: {fehler}")
+        if versuch + 1 < versuche:
+            time.sleep(2 + 3 * versuch)
+    return False
 
 
 def warter(agy: int, tty: str) -> int:
@@ -270,16 +277,33 @@ def warter(agy: int, tty: str) -> int:
     h.schreib(f"agy Warter gestartet (agy {agy}, {tty or 'ohne tty'})")
     weckversuch = 0.0
     fehlversuche = 0
+    geweckt = 0.0  # Zeitpunkt des letzten „erfolgreichen“ Weckens; nimmt pre den Eingang danach nicht, zählt es als gescheitert
     gemeldet: set[str] = set()
     try:
         while True:
             if not h.lebt(agy, agy_start):
                 h.schreib("agy Warter: Sitzung beendet")
+                # Alle offenen, auch schon als „ruht“ gemeldete (der Grund ist jetzt ein anderer) und die noch beim Relay liegenden.
                 offen = [n["nachtrag_id"] for n in offene_ids(lies_eingang())]
-                melde_problem([i for i in offen if i not in gemeldet],
-                              "Die Antigravity-Sitzung wurde beendet und ist nicht mehr fortsetzbar; der Nachtrag kam nicht an. "
+                try:
+                    offen += [n["nachtrag_id"] for n in h.hole_nachtraege(0) if n["nachtrag_id"] not in offen]
+                except Exception as fehler:
+                    h.schreib(f"agy Warter: Relay beim Ende {fehler}")
+                melde_problem(offen, "Die Antigravity-Sitzung wurde beendet und ist nicht mehr fortsetzbar; der Nachtrag kam nicht an. "
                               "Jarvis startet dafür keine neue Sitzung.")
                 return 0
+            # Die Sitzung arbeitet wieder (Frank hat getippt oder das Wecken griff): frisch zählen, wieder im 30-s-Takt wecken.
+            if not datei("ruht").exists() and not geweckt:
+                fehlversuche = 0
+            if geweckt and not offene_ids(lies_eingang()):
+                geweckt = 0.0  # pre oder Stop hat den Eingang übernommen
+            if geweckt and time.monotonic() - geweckt > 180:
+                geweckt = 0.0
+                if offene_ids(lies_eingang()) and not datei("ruht").exists():
+                    # Der Weckruf kam nicht als Eingabe an (etwa als Einfügen genommen): erneut wecken statt still liegen lassen.
+                    h.schreib("agy Warter: Weckruf ohne Wirkung, Nachtrag noch im Eingang")
+                    fehlversuche += 1
+                    datei("ruht").touch()
             if lies_warter()[0] != os.getpid():
                 h.schreib("agy Warter: abgelöst")
                 return 0
@@ -319,18 +343,17 @@ def warter(agy: int, tty: str) -> int:
                     weckversuch = time.monotonic()
                     grund = wecke(tty)
                     if not grund:
-                        fehlversuche = 0
+                        geweckt = time.monotonic()
                         datei("ruht").unlink(missing_ok=True)
                         h.schreib("agy Warter: ruhende Sitzung geweckt")
                     else:
                         fehlversuche += 1
-                        if fehlversuche >= 3:
-                            offen = [n["nachtrag_id"] for n in offene_ids(lies_eingang()) if n["nachtrag_id"] not in gemeldet]
-                            if offen:
-                                gemeldet.update(offen)
-                                melde_problem(offen, f"Die Antigravity-Sitzung ruht, lässt sich aber nicht wecken: {grund}. Der Nachtrag "
+                    if fehlversuche >= 3:
+                        offen = [n["nachtrag_id"] for n in offene_ids(lies_eingang()) if n["nachtrag_id"] not in gemeldet]
+                        if offen and melde_problem(offen, f"Die Antigravity-Sitzung ruht, lässt sich aber nicht wecken: {grund or 'der Weckruf kam in der Sitzung nicht an'}. Der Nachtrag "
                                               "bleibt eingereiht und geht hinein, sobald im Terminal-Tab der Sitzung etwas eingegeben wird; "
-                                              "eine neue Sitzung startet Jarvis nicht.")
+                                              "eine neue Sitzung startet Jarvis nicht."):
+                            gemeldet.update(offen)
             if liste and not neu:
                 # Der Relay bietet sie bis zur Quittung weiter an: nicht im Kreis fragen.
                 time.sleep(3)

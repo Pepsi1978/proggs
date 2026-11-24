@@ -255,14 +255,21 @@ MAC_SKRIPT = '''on run argv
 tell application "Terminal"
  repeat with f in windows
   -- Fenster ohne lesbare Tabs (Einstellungen, Inspektor) brachen die ganze Suche mit -1728 ab (Vorfall N7RGY, 24.11.2026).
+  -- Nur das Lesen ist abgefangen: Ein Fehler beim Tippen (fehlende Automationsfreigabe) kommt weiter auf stderr an.
+  set tabListe to {}
   try
-   repeat with t in tabs of f
-    if tty of t is (item 1 of argv) then
-     do script (item 2 of argv) in t
-     return "ok"
-    end if
-   end repeat
+   set tabListe to tabs of f
   end try
+  repeat with t in tabListe
+   set passt to false
+   try
+    set passt to (tty of t is (item 1 of argv))
+   end try
+   if passt then
+    do script (item 2 of argv) in t
+    return "ok"
+   end if
+  end repeat
  end repeat
 end tell
 return "kein tab"

@@ -1387,6 +1387,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return
         }
         if (daten.optString("stand") == "nachtrag") {
+            // Ohne nachtrag_ids, mit problem_ids: Der Warter kann eingereihte Nachträge nicht zustellen. Ältere Jarvis-Fassungen
+            // brechen hier ohne nachtrag_ids ab und lassen den Auftragsstand unberührt; der Relay quittiert dabei nichts.
+            daten.optJSONArray("problem_ids")?.let { nachtragProblem(daten, it); return }
             // Der Hook hat Nachträge in die Sitzung gegeben: zugestellt, die Sitzung arbeitet wieder. Eine Nachquittung für
             // schon Zugestelltes ändert nichts und erscheint nicht noch einmal im Gespräch.
             val ids = daten.optJSONArray("nachtrag_ids")?.let { l -> (0 until l.length()).map { l.optString(it) }.toSet() } ?: return
@@ -1398,17 +1401,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return
         }
         if (daten.optString("stand") == "nachtrag_problem") {
-            // Der Warter am Rechner kann eingereihte Nachträge nicht in die Sitzung geben (ruht und lässt sich nicht wecken, oder
-            // beendet): klar sagen statt still „eingereiht“. Kommt einer später doch an, wechselt er auf empfangen (alsZugestellt).
-            val ids = daten.optJSONArray("nachtrag_ids")?.let { l -> (0 until l.length()).map { l.optString(it) }.toSet() } ?: return
-            val grund = daten.optString("schritt").take(400)
-            val neu = Auftragsbuch.setzeNachtraege(app, daten.optString("auftrag_id"), ids, setOf("angenommen", "fehler"), "nicht_zustellbar")
-            if (neu.isEmpty()) return
-            Auftragsbuch.finde(app, daten.optString("auftrag_id"))?.let { e ->
-                Auftragsbuch.nachtragGrund(app, e.optString("id"), neu.map { it.optString("id") }.toSet(), grund)
-                Logbuch.system("Nachtrag nicht zustellbar", "Auftrag ${e.optString("id")}: ${neu.joinToString { it.optString("id") }}: $grund")
-                statusZeile(e, "⚠️ Nachtrag ${neu.joinToString(", ") { it.optString("id") }} nicht zugestellt: $grund")
-            }
+            // Fassung 1.8.949 meldete so; ab 1.8.954 kommt es als „nachtrag“ mit problem_ids (ältere Jarvis ignorieren das).
+            nachtragProblem(daten, daten.optJSONArray("nachtrag_ids"))
             return
         }
         if (daten.optBoolean("spaet")) {
@@ -1688,6 +1682,26 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Nachträge sind in der Sitzung angekommen: Stand zugestellt, die Sitzung arbeitet wieder, ein Satz ins Gespräch (je Nachtrag nur einmal). */
+    /**
+     * Der Warter am Rechner kann eingereihte Nachträge nicht in die Sitzung geben (ruht und lässt sich nicht wecken, oder beendet):
+     * klar sagen statt still „eingereiht“. Kommt einer später doch an, wechselt er auf empfangen (alsZugestellt). Ein neuer Grund
+     * (etwa „beendet“ nach „ruht“) ersetzt den alten. Die Meldung erreicht alle Geräte: Gesprächszeile nur vom Gerät des Nachtrags,
+     * das sie selbst spiegelt.
+     */
+    private fun nachtragProblem(daten: JSONObject, liste: org.json.JSONArray?) {
+        val ids = liste?.let { l -> (0 until l.length()).map { l.optString(it) }.toSet() } ?: return
+        val grund = daten.optString("schritt").take(400)
+        val auftragId = daten.optString("auftrag_id")
+        val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler", "nicht_zustellbar"), "nicht_zustellbar", grund)
+        if (neu.isEmpty()) return
+        val e = Auftragsbuch.finde(app, auftragId) ?: return
+        Logbuch.system("Nachtrag nicht zustellbar", "Auftrag ${e.optString("id")}: ${neu.joinToString { it.optString("id") }}: $grund")
+        val eigene = neu.filter { it.optString("geraet").ifEmpty { de.frank.jarvis.data.Geraet.kennung } == de.frank.jarvis.data.Geraet.kennung }
+        if (eigene.isEmpty()) return
+        val wort = if (eigene.all { istNachricht(it.optString("id")) }) "Nachricht" else "Nachtrag"
+        statusZeile(e, "⚠️ $wort ${eigene.joinToString(", ") { it.optString("id") }} nicht zugestellt: $grund")
+    }
+
     private fun alsZugestellt(auftragId: String, ids: Set<String>, schritt: String) {
         val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler", "nicht_zustellbar"), "zugestellt")
         if (neu.isEmpty()) return
@@ -2897,18 +2911,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             .filter { (_, n) -> n.optString("stand") in listOf("angenommen", "fehler") && !istNachricht(n.optString("id")) && n.has("senden") &&
                 n.optString("geraet").ifEmpty { de.frank.jarvis.data.Geraet.kennung } == de.frank.jarvis.data.Geraet.kennung }
 
-        /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
+        /**
+         * Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. [grund] (nicht
+         * zustellbar) wird im selben gesperrten Durchgang gesetzt, sonst entfernt.
+         */
         @Synchronized
-        /** Hängt den Grund an Nachträge, die nicht zustellbar sind (für programmierauftraege). */
-        fun nachtragGrund(context: Context, id: String, ids: Set<String>, grund: String) {
-            val liste = lies(context)
-            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return
-            val nachtraege = eintrag.optJSONArray("nachtraege") ?: return
-            (0 until nachtraege.length()).map { nachtraege.getJSONObject(it) }.filter { it.optString("id") in ids }.forEach { it.put("grund", grund) }
-            schreib(context, liste)
-        }
-
-        fun setzeNachtraege(context: Context, id: String, ids: Set<String>?, von: Set<String>, nach: String): List<JSONObject> {
+        fun setzeNachtraege(context: Context, id: String, ids: Set<String>?, von: Set<String>, nach: String, grund: String? = null): List<JSONObject> {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return emptyList()
             val nachtraege = eintrag.optJSONArray("nachtraege") ?: return emptyList()
@@ -2916,7 +2924,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 .filter { (ids == null || it.optString("id") in ids) && it.optString("stand") in von }
             if (geaendert.isEmpty()) return emptyList()
             val jetzt = System.currentTimeMillis()
-            geaendert.forEach { it.put("stand", nach).put(nach, jetzt) }
+            geaendert.forEach { n -> n.put("stand", nach).put(nach, jetzt); if (grund != null) n.put("grund", grund) else n.remove("grund") }
             schreib(context, liste)
             return geaendert
         }
