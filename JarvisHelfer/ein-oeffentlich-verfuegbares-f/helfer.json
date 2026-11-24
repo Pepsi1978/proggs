@@ -1,0 +1,52 @@
+{
+  "kennung": "ein-oeffentlich-verfuegbares-f",
+  "name": "Webfoto im Chat",
+  "zweck": "Lädt ein öffentlich verfügbares Foto über HTTPS vorübergehend und zeigt es direkt als Bild im laufenden Jarvis-Chat, ohne Ablage-Eintrag.",
+  "faehigkeiten": [
+    "Foto einer Person, eines Orts oder einer Sache zeigen: suche mit dem Namen, etwa „Liam Neeson“, nimmt das Hauptfoto des passenden Wikipedia-Artikels",
+    "Foto von einer beliebigen öffentlichen HTTPS-Bildadresse zeigen (url)",
+    "Echtes Foto statt KI-Bild, ohne Quellenzeile, ohne Speichern in der Ablage"
+  ],
+  "schlagworte": ["foto", "bild", "zeigen", "webfoto", "internet", "wikipedia", "person", "schauspieler", "promi", "chat", "anzeigen"],
+  "version": "1.0.0",
+  "ort": "handy",
+  "art": "skript",
+  "datei": "helfer.js",
+  "rolle": "",
+  "eingabe": {
+    "type": "object",
+    "properties": {
+      "suche": {"type": "string", "description": "Wer oder was zu sehen sein soll, etwa „Liam Neeson“; nimmt das Hauptfoto des passenden englischen Wikipedia-Artikels. Entweder suche oder url."},
+      "url": {"type": "string", "description": "Vollständige HTTPS-Adresse eines öffentlich erreichbaren Bildes. Entweder suche oder url."},
+      "titel": {"type": "string", "description": "Optional: Name der Bilddatei im Chat; sonst der Artikeltitel oder „Foto“."},
+      "max_kante": {"type": "integer", "minimum": 64, "maximum": 600, "description": "Optional: gewünschte längste Bildseite in Pixel, Vorgabe 512; das Ergebnis kann wegen des Bildformats etwas abweichen, höchstens 639."}
+    },
+    "additionalProperties": false
+  },
+  "ausgabe": "Eine Bilddatei (BMP), die Jarvis als Anhang direkt im laufenden Chat zeigt, dazu ein Satz mit Titel und Größe; in daten stehen datei, breite, hoehe und titel. Nie mit in_ablage aufrufen: Das Foto soll nicht in die Ablage.",
+  "voraussetzungen": ["Internet am Handy"],
+  "grenzen": [
+    "Das Bild im Chat erscheint nur, wenn Jarvis den Helfer im eigenen Chat aufruft; über ChatGPT oder ohne offenes Gespräch kommt nur der Text an.",
+    "Das Foto läuft über den öffentlichen Bilddienst wsrv.nl, der die Bildadresse sieht; nur öffentlich erreichbare Bilder, keine Anmeldung.",
+    "Höchstens 639 Pixel an der längsten Seite, Farben mit 7 Bit je Kanal; kleine Bilder werden vergrößert. Weil nicht jede Bildgröße darstellbar ist, kann das Foto am Rand bis zu 15 % beschnitten sein.",
+    "suche nimmt das erste passende Ergebnis der englischen Wikipedia; hat der Artikel kein Foto, meldet der Helfer das.",
+    "Die Datei liegt nur im Ausgabeordner des Helfers und wird von Jarvis dort wieder aufgeräumt; der Helfer legt nichts in die Ablage."
+  ],
+  "braucht_app_update": false,
+  "rechte": {
+    "netz": ["wsrv.nl", "en.wikipedia.org"],
+    "konten": [],
+    "werkzeuge": [],
+    "extern": false
+  },
+  "tests": [
+    {"name": "Normalfall: Foto von Liam Neeson über die Suche", "eingabe": {"suche": "Liam Neeson"}, "erwartet": {"ok": true, "enthaelt": ["Liam Neeson", "Liam Neeson.bmp", "Pixel"]}},
+    {"name": "Normalfall: Foto über eine HTTPS-Adresse", "eingabe": {"url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Liam_Neeson_Deauville_2012_2.jpg/330px-Liam_Neeson_Deauville_2012_2.jpg", "titel": "Neeson Deauville", "max_kante": 300}, "erwartet": {"ok": true, "enthaelt": ["Neeson Deauville.bmp", "Pixel"]}},
+    {"name": "Fehler: keine Angabe", "eingabe": {}, "erwartet": {"ok": false}},
+    {"name": "Fehler: suche und url zugleich", "eingabe": {"suche": "Liam Neeson", "url": "https://example.org/a.jpg"}, "erwartet": {"ok": false}},
+    {"name": "Fehler: Adresse ohne HTTPS", "eingabe": {"url": "http://example.org/a.jpg"}, "erwartet": {"ok": false}},
+    {"name": "Fehler: max_kante außerhalb", "eingabe": {"suche": "Liam Neeson", "max_kante": 5000}, "erwartet": {"ok": false}},
+    {"name": "Fehler: unbekannte Angabe", "eingabe": {"suche": "Liam Neeson", "in_ablage": true}, "erwartet": {"ok": false}},
+    {"name": "Fehler: Adresse ist kein Bild", "eingabe": {"url": "https://en.wikipedia.org/wiki/Main_Page"}, "erwartet": {"ok": false}}
+  ]
+}
