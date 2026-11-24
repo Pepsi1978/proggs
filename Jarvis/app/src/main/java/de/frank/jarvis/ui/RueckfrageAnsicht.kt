@@ -318,19 +318,21 @@ fun RueckfrageEbene(vm: AppViewModel) {
  */
 @Composable
 fun RueckfrageNachlauf(vm: AppViewModel) {
-    val offen = vm.rueckfrageDialog != null
+    val id = vm.rueckfrageDialog
     // Bewusst kein Zustand: Die Schicht muss schon in dem Bild stehen, in dem die Ebene verschwindet, nicht erst ein Bild später.
-    val merker = androidx.compose.runtime.remember { longArrayOf(0L, 0L) } // [0] = war offen (1/0), [1] = Schutz bis
-    if (offen) merker[0] = 1L
-    else if (merker[0] == 1L) {
-        merker[0] = 0L
-        merker[1] = android.os.SystemClock.uptimeMillis() + NACHLAUF_MS
-        vm.tippSperreBis = merker[1]
+    // Jeder Wechsel zählt (gesendet, geschlossen, die nächste rückt nach): Die nächste zeichnet erst nach dem Lesen ihres Stands.
+    val merker = androidx.compose.runtime.remember { arrayOf<Any?>(null, 0L) } // [0] = zuletzt gezeigte frage_id, [1] = Schutz bis
+    if (id != merker[0]) {
+        if (merker[0] != null) {
+            merker[1] = android.os.SystemClock.uptimeMillis() + NACHLAUF_MS
+            vm.tippSperreBis = merker[1] as Long
+        }
+        merker[0] = id
     }
     var ende by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
-    val aktiv = !offen && android.os.SystemClock.uptimeMillis() < merker[1] && ende != merker[1]
+    val bis = merker[1] as Long
+    val aktiv = android.os.SystemClock.uptimeMillis() < bis && ende != bis
     if (!aktiv) return
-    val bis = merker[1]
     LaunchedEffect(bis) {
         delay((bis - android.os.SystemClock.uptimeMillis()).coerceAtLeast(0L))
         ende = bis
@@ -380,7 +382,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
         }
     }
     val beantwortbar = RueckfrageStand.beantwortbar(r.stand)
-    val sendet = r.stand == RueckfrageStand.SENDET
+    val sendet = r.stand == RueckfrageStand.SENDET || r.id in vm.rueckfrageSendet
     // Werkzeugbau: Die 150 Sekunden beginnen erst hier, wenn Frank die Frage wirklich sieht; Tippen und Sprechen schieben die Entscheidung hinaus.
     val fristKontext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     LaunchedEffect(r.id, beantwortbar) {

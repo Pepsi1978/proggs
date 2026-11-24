@@ -2236,17 +2236,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             var stumm = false
             val rueckruf = if (android.os.Build.VERSION.SDK_INT >= 29 && am != null) object : android.media.AudioManager.AudioRecordingCallback() {
                 override fun onRecordingConfigChanged(configs: MutableList<android.media.AudioRecordingConfiguration>?) {
-                    // Nur die eigenen Aufnahmen tragen den Stumm-Zustand; das Weckwort pausiert während des Diktats.
+                    // Android liefert hier auch fremde Aufnahmen (anonymisiert); ohne die eigene Session-Kennung ist der
+                    // Stumm-Zustand nicht sicher Jarvis zuzuordnen. Darum nur fürs Logbuch, keine Meldung an Frank.
                     val jetzt = configs.orEmpty().any { it.isClientSilenced }
                     if (jetzt == stumm || !nimmtAuf) return
                     stumm = jetzt
-                    if (jetzt) {
-                        Logbuch.sprache("Aufnahme stummgeschaltet", "Android gibt das Mikrofon gerade einer anderen App")
-                        meldung = "Android hat das Mikrofon gerade einer anderen App gegeben. Was du bisher gesagt hast, bleibt erhalten."
-                    } else {
-                        Logbuch.sprache("Aufnahme wieder frei", "Mikrofon zurück bei Jarvis")
-                        meldung = "Das Mikrofon ist wieder frei, ich höre weiter zu."
-                    }
+                    Logbuch.sprache(if (jetzt) "Aufnahme womöglich stummgeschaltet" else "Stummschaltung aufgehoben", "Android meldet eine stummgeschaltete Aufnahme: $jetzt")
                 }
             }.also { runCatching { am.registerAudioRecordingCallback(it, android.os.Handler(android.os.Looper.getMainLooper())) } } else null
             try {
@@ -2256,6 +2251,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     kotlinx.coroutines.delay(500)
                     val jetzt = mikro.pufferBytes
                     if (jetzt != bisher) { bisher = jetzt; still = 0; continue }
+                    // Erst scharf, wenn das Mikrofon überhaupt geliefert hat (Bluetooth und Konferenz-Mikrofon brauchen beim Start länger).
+                    if (jetzt == 0) continue
                     // 3 s ohne ein einziges neues Byte: Das Mikrofon liefert nichts mehr (Stille zählt mit, sie kommt als Nullen).
                     if (++still < 6 || !nimmtAuf || abzweigAb >= 0) continue
                     Logbuch.sprache("Aufnahme vom System unterbrochen", "${jetzt / 1024} KB gesichert")
@@ -2306,6 +2303,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var verwerfAnlass = "Session von Hand gewechselt"
     /** Die Mitschrift der zuletzt beendeten Aufnahme; ein Wechsel von Hand bricht sie ab. */
     private var mitschriftJob: Job? = null
+    /** Eine Feld-Mitschrift, die beim Verlassen ihrer Session weiterlief und ihr Ergebnis als [Mitnahme] abliefert. */
+    private var geretteteMitschrift: Job? = null
 
     /**
      * Frank wechselt von Hand die Session (Seitenleiste, „Neues Gespräch“, Löschen): Aufnahme, Mitschrift und Gesprächsmodus
@@ -2323,7 +2322,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!nimmtAuf) promptDiktat = false
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
         weckwortLauf?.cancel()
-        mitschriftJob?.cancel()
+        // Die Session wird nur verlassen und ein Diktat der Eingabeblase wird gerade mitgeschrieben (schwaches Netz): nicht
+        // abbrechen, sondern als mitgenommene Aufnahme ihrer Session zu Ende schreiben (24.11.2026 ging so ein 36-s-Diktat verloren).
+        val retten = mitnahmeErlaubt && schreibtMit && feldMitschrift && !nimmtAuf && mitnahme == null && mitschriftJob?.isActive == true
+        if (retten) {
+            geretteteMitschrift = mitschriftJob
+            mitnahme = Mitnahme(sitzungId, System.currentTimeMillis()).apply { laeuft = false; schreibt = true }
+            Logbuch.sprache("Mitschrift mitgenommen", anlass)
+        } else mitschriftJob?.cancel()
         mitschriftJob = null
         weichendeRunde = null
         if (!aktiv) { antwortDiktatFeld = null; return null }
@@ -3011,7 +3017,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
-                if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", verwerfAnlass); return@launch }
+                if (stand != wechselStand) {
+                    val m = mitnahme
+                    if (geretteteMitschrift === coroutineContext[Job] && m != null && m.schreibt && m.text == null) {
+                        m.schreibt = false
+                        if (text.isBlank()) { mitnahme = null; meldung = "In der mitgenommenen Aufnahme habe ich nichts verstanden."; return@launch }
+                        m.text = text
+                        Logbuch.sprache("Mitschrift gerettet", "${text.length} Zeichen warten in ihrer Session")
+                        if (sitzungId == m.sitzung) mitnahmeAbholen()
+                        else meldung = "Dein Diktat ist mitgeschrieben. Es steht im Eingabefeld, sobald du in seine Session zurückkehrst."
+                        return@launch
+                    }
+                    Logbuch.sprache("Mitschrift verworfen", verwerfAnlass); return@launch
+                }
                 if (text.isBlank() || ziel != null) de.frank.jarvis.observability.Antwortkette.verwerfen()
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
@@ -3034,8 +3052,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.fehler("Mitschrift", e)
                 meldung = e.message ?: "Die Aufnahme konnte nicht in Text umgewandelt werden."
             } finally {
-                schreibtMit = false
-                feldMitschrift = false
+                // Eine gerettete Mitschrift gehört nicht mehr zur offenen Session: deren Anzeige (eine neue Mitschrift) bleibt unberührt.
+                if (geretteteMitschrift === coroutineContext[Job]) {
+                    geretteteMitschrift = null
+                    mitnahme?.takeIf { it.schreibt && it.text == null }?.let { mitnahme = null }
+                } else {
+                    schreibtMit = false
+                    feldMitschrift = false
+                }
                 if (antwortFeld != null && antwortDiktatFeld == antwortFeld) antwortDiktatFeld = null
                 if (warMentalitaet) mentalitaetDiktat = false
             }
@@ -3412,7 +3436,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Rechner und die Claude-App weitergeben. Der Stand steht danach an der Rückfrage (sendet, beantwortet, Fehler mit Grund).
      */
     fun programmierAntwort(frageId: String, antworten: List<String>, text: String, freigeben: Boolean = false) {
+        // Sofort, nicht erst nach dem Lesen des Stands (nebenher bis zu 2 s): Ein zweiter Tipp sendet nicht erneut.
+        if (frageId in rueckfrageSendet) { Logbuch.sprache("Tipp nach Rückfrage ignoriert", "Antwort wird schon gesendet"); return }
+        rueckfrageSendet += frageId
         viewModelScope.launch {
+          try {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
             val ergebnis = runCatching { faehigkeit?.beantworte(frageId, antworten, text, freigeben) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
             // Angekommen braucht keine Blase oben (sie verdeckte die Reiter): Der Stand steht schon an der Rückfrage im Chat.
@@ -3423,8 +3451,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (rueckfrageOffen?.second == frageId) { rueckfrageOffen = null; rueckfrageNebenher = null; rueckfrageGeschlossen += frageId }
                 if (rueckfrageDialog == null) naechsteRueckfrage()
             }
+          } finally { rueckfrageSendet -= frageId }
         }
     }
+
+    /** Rückfragen, deren Antwort gerade unterwegs ist; der Knopf zeigt dann sofort „Wird gesendet …“. */
+    val rueckfrageSendet = androidx.compose.runtime.mutableStateListOf<String>()
 
     /** Franks gesprochene Modell- oder CLI-Wahl (siehe [sende]): steht als Frage und Antwort im Gespräch, die Antwort wird vorgelesen. */
     private fun sprachWahl(text: String, wahlId: String, wert: String, laut: Boolean) {
@@ -3644,6 +3676,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Geste zu viel). Hey Jarvis und der Live-Modus verhalten sich wie bisher.
      */
     fun zurueckInSession() {
+        if (nachRueckfrageGesperrt("Zurück-Geste")) return
         val jetzt = System.currentTimeMillis()
         // Hängt die Umwandlung in Text (schwaches Netz), führt eine zweite Geste kurz danach wie früher zum Startbildschirm.
         val nochmal = schreibtMit && !nimmtAuf && jetzt - zurueckGewarnt < 5_000
