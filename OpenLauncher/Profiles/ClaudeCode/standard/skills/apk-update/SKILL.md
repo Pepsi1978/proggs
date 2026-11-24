@@ -69,7 +69,9 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
    `Updates` auflisten und fragen.
 2. **Update muss fertig sein.** `git -C ~/proggs status -sb -- <Projekt>` prüfen. Offene
    Änderungen am Projekt zuerst nach Regel 9 abschließen (bauen, Version bumpen, committen,
-   pushen). Nie halbfertigen Code als Update ausliefern.
+   pushen). Nie halbfertigen Code als Update ausliefern. Sind es fremde Änderungen einer parallelen Sitzung:
+   `git worktree add --detach <scratchpad>/wt origin/main`, Skript mit `-ProggsWurzel <scratchpad>/wt`; meldet es
+   „HEAD ist nicht origin/main“, `git fetch` und `git -C <wt> checkout --detach origin/main`, dann neu starten.
 3. **Skript starten** (mit dem höchsten Zeitlimit: Es wartet nur auf den Build, nicht auf den Upload; dauert der Build länger
    und das Werkzeug verschiebt den Befehl in den Hintergrund, auf das Ende warten und nie abbrechen):
    ```powershell
