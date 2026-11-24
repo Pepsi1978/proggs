@@ -85,6 +85,8 @@ enum RepoSync {
         // Timeout 0: Ein abgebrochener Rebase mit Autostash hinterliesse das Repo mitten in der Arbeit.
         let pull = Shell.run(git, ["-C", repo, "pull", "--rebase", "--autostash", "--quiet"], environment: env, timeout: 0)
         guard pull.finished, pull.exitCode == 0 else {
+            // Nie mitten im Rebase stehen lassen: sonst blieben Konfliktmarker im Arbeitsbaum.
+            if pull.finished { _ = Shell.run(git, ["-C", repo, "rebase", "--abort"], environment: env, timeout: 20) }
             return Result(ok: false, message: "committet, aber Abgleich fehlgeschlagen: " + firstLine(pull.stderr))
         }
         let push = Shell.run(git, ["-C", repo, "push", "--quiet", "origin", "HEAD:main"], environment: env, timeout: 30)

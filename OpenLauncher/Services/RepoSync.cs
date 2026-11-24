@@ -88,7 +88,12 @@ public static class RepoSync
             var commit = await RunGitAsync(repo, TimeSpan.FromSeconds(20), "commit", "--quiet", "-m", message, "--", filePath);
             if (commit.ExitCode != 0) return new Result(false, FirstLine(commit.Error));
             var pull = await RunGitAsync(repo, PullTimeout, killOnTimeout: false, "pull", "--rebase", "--autostash", "--quiet");
-            if (pull.ExitCode != 0 || pull.TimedOut) return new Result(false, "committet, aber Abgleich fehlgeschlagen: " + FirstLine(pull.Error));
+            if (pull.ExitCode != 0 || pull.TimedOut)
+            {
+                // Nie mitten im Rebase stehen lassen: sonst blieben Konfliktmarker im Arbeitsbaum.
+                if (!pull.TimedOut) await RunGitAsync(repo, TimeSpan.FromSeconds(20), "rebase", "--abort");
+                return new Result(false, "committet, aber Abgleich fehlgeschlagen: " + FirstLine(pull.Error));
+            }
             var push = await RunGitAsync(repo, TimeSpan.FromSeconds(30), "push", "--quiet", "origin", "HEAD:main");
             if (push.ExitCode != 0 || push.TimedOut) return new Result(false, "committet, aber Push fehlgeschlagen: " + FirstLine(push.Error));
             log.Info("RepoSync", "CommitAndPushFileAsync", "Datei committet und gepusht", new { filePath });

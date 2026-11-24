@@ -102,6 +102,7 @@ final class ModelRegistry {
                !parsed.isEmpty, parsed.contains(where: { !$0.id.isEmpty }) {
                 registry.groups = parsed
                 registry.repairAndNormalize()
+                registry.applyStoredLayout()
                 registry.save()
                 Logger.shared.info("ModelRegistry", "load", "\(parsed.count) Modellgruppen geladen", ["filePath": filePath])
                 return registry
@@ -111,6 +112,7 @@ final class ModelRegistry {
             if let oldList = try? JSONDecoder().decode([ModelEntry].self, from: data),
                oldList.contains(where: { !$0.slug.isEmpty }) {
                 registry.groups = createDefaults(openRouterModels: oldList)
+                registry.applyStoredLayout()
                 registry.save()
                 Logger.shared.info("ModelRegistry", "load", "\(oldList.count) Modelle aus alter Liste migriert", ["filePath": filePath])
                 return registry
@@ -121,6 +123,7 @@ final class ModelRegistry {
         }
 
         registry.groups = createDefaults()
+        registry.applyStoredLayout()
         registry.save()
         return registry
     }
@@ -165,12 +168,205 @@ final class ModelRegistry {
         // liegt im Repo und wird von beiden Seiten geschrieben - unterschiedliche Formatierung
         // wuerde bei jedem Start einen Riesen-Diff und Abgleich-Konflikte erzeugen.
         let json = JSONNode.array(groups.map(\.jsonNode)).serialized()
+        // Unveraenderten Inhalt nicht neu schreiben: keine Scheinaenderung bei jedem Start.
+        if let vorhanden = try? String(contentsOfFile: ModelRegistry.filePath, encoding: .utf8), vorhanden == json { return }
         if !Paths.writeAtomic(json, to: ModelRegistry.filePath) {
             Logger.shared.error("ModelRegistry", "save", "Modell-Liste konnte nicht geschrieben werden")
         }
     }
 
     // ===================== Bearbeiten =====================
+
+    // ===================== Anordnung (Reihenfolge + Sichtbarkeit) =====================
+
+    /// Gegenstueck zu ModelRegistry.cs (Windows 1.24.133): Die gemeinsame Modell-Anordnung aller Rechner
+    /// (Gruppenreihenfolge, je Gruppe die Modelle mit Name, eigenem Eintrag, Ausgeblendet, dazu entfernte
+    /// Modelle) liegt versioniert in model-layout.json, wird NUR bei Bedienaktionen geschrieben und sofort
+    /// committet und gepusht und beim Laden sowie nach jedem Repo-Abgleich ueber models.json gelegt.
+    static var layoutPath: String {
+        (Paths.repoRoot as NSString).appendingPathComponent("model-layout.json")
+    }
+
+    private struct LayoutModel: Decodable {
+        var Slug: String = ""
+        var Name: String = ""
+        var EigenerName: Bool = false
+        var Eigen: Bool = false
+        var Ausgeblendet: Bool = false
+    }
+
+    private struct ModelLayout: Decodable {
+        var Gruppen: [String] = []
+        var Modelle: [String: [LayoutModel]] = [:]
+        var Entfernt: [String: [String]] = [:]
+    }
+
+    private var layoutText: String?
+    private var removedSinceSave: [String: Set<String>] = [:]
+    private static let layoutPushQueue = DispatchQueue(label: "OpenLauncher.LayoutPush")
+    private static var layoutPushQueued = false
+    private static let layoutPushLock = NSLock()
+
+    private static func readLayout() -> (layout: ModelLayout, text: String)? {
+        guard let raw = try? String(contentsOfFile: layoutPath, encoding: .utf8) else { return nil }
+        let text = raw.replacingOccurrences(of: "\r\n", with: "\n")
+        guard let data = text.data(using: .utf8),
+              let layout = try? JSONDecoder().decode(ModelLayout.self, from: data) else {
+            Logger.shared.warn("ModelRegistry", "readLayout", "Anordnung nicht lesbar", ["path": layoutPath])
+            return nil
+        }
+        return (layout, text)
+    }
+
+    private static func layoutList<T>(_ map: [String: [T]], _ groupId: String) -> [T]? {
+        map.first { $0.key.caseInsensitiveCompare(groupId) == .orderedSame }?.value
+    }
+
+    func applyStoredLayout() {
+        guard let stored = ModelRegistry.readLayout() else { return }
+        layoutText = stored.text
+        _ = applyLayout(stored.layout)
+    }
+
+    /// Nach einem Repo-Abgleich: hat ein anderer Rechner eine neue Anordnung gepusht, sie uebernehmen.
+    func reloadLayoutIfChanged() -> Bool {
+        guard let stored = ModelRegistry.readLayout(), stored.text != layoutText else { return false }
+        layoutText = stored.text
+        let changed = applyLayout(stored.layout)
+        if changed { save() }
+        Logger.shared.info("ModelRegistry", "reloadLayoutIfChanged", "Neue Anordnung aus dem Repo übernommen", ["changed": "\(changed)"])
+        return changed
+    }
+
+    private func applyLayout(_ layout: ModelLayout) -> Bool {
+        var changed = false
+        var target = 0
+        for id in layout.Gruppen {
+            guard let index = groups.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }),
+                  index >= target else { continue }
+            if index != target { groups.insert(groups.remove(at: index), at: target); changed = true }
+            target += 1
+        }
+        for group in groups {
+            let entries = ModelRegistry.layoutList(layout.Modelle, group.id) ?? []
+            let removed = Set((ModelRegistry.layoutList(layout.Entfernt, group.id) ?? []).map { $0.lowercased() })
+            let listed = Set(entries.map { $0.Slug.lowercased() })
+            let before = group.models.count
+            group.models.removeAll { removed.contains($0.slug.lowercased()) && !listed.contains($0.slug.lowercased()) }
+            if group.models.count != before { changed = true }
+
+            var position = 0
+            for entry in entries where !entry.Slug.isEmpty {
+                var index = group.models.firstIndex { $0.slug.caseInsensitiveCompare(entry.Slug) == .orderedSame }
+                if index == nil {
+                    // Auf einem anderen Rechner hinzugefuegt: eigene Eintraege uebernehmen. Katalogmodelle,
+                    // die es hier nicht gibt (z. B. fremde LM-Studio-Modelle), nicht vortaeuschen.
+                    guard entry.Eigen else { continue }
+                    let added = ModelRegistry.model(entry.Slug, entry.Name.isEmpty ? ModelRegistry.toDisplayName(entry.Slug) : entry.Name,
+                                                    group.providerId, group.providerName)
+                    added.isUserDefined = true
+                    added.hasCustomDisplayName = entry.EigenerName
+                    group.models.insert(added, at: min(position, group.models.count))
+                    index = min(position, group.models.count - 1)
+                    changed = true
+                }
+                guard let found = index, found >= position else { continue }
+                if found != position { group.models.insert(group.models.remove(at: found), at: position); changed = true }
+                let model = group.models[position]
+                if model.isHidden != entry.Ausgeblendet { model.isHidden = entry.Ausgeblendet; changed = true }
+                if entry.Eigen && !model.isUserDefined { model.isUserDefined = true; changed = true }
+                if entry.EigenerName, !entry.Name.isEmpty, !model.hasCustomDisplayName || model.displayName != entry.Name {
+                    model.displayName = entry.Name
+                    model.hasCustomDisplayName = true
+                    changed = true
+                }
+                position += 1
+            }
+        }
+        return changed
+    }
+
+    /// Speichert nach einer Bedienaktion Katalog und Anordnung und pusht die Anordnung.
+    func saveUserChange() {
+        save()
+        saveLayout()
+    }
+
+    /// Merkt ein vom Nutzer entferntes Modell, damit es auf allen Rechnern verschwindet.
+    private func markRemoved(_ group: ModelGroupEntry, _ slug: String) {
+        removedSinceSave[group.id.lowercased(), default: []].insert(slug)
+    }
+
+    private func saveLayout() {
+        let old = ModelRegistry.readLayout()?.layout
+        let modelle = JSONNode.object()
+        let entfernt = JSONNode.object()
+        var ids: [String] = []
+        func contains(_ list: [String], _ slug: String) -> Bool {
+            list.contains { $0.caseInsensitiveCompare(slug) == .orderedSame }
+        }
+        func node(_ slug: String, _ name: String, _ eigenerName: Bool, _ eigen: Bool, _ ausgeblendet: Bool) -> JSONNode {
+            let n = JSONNode.object()
+            n["Slug"] = .string(slug)
+            n["Name"] = .string(name)
+            n["EigenerName"] = .bool(eigenerName)
+            n["Eigen"] = .bool(eigen)
+            n["Ausgeblendet"] = .bool(ausgeblendet)
+            return n
+        }
+        for group in groups {
+            ids.append(group.id)
+            let local = group.models.map(\.slug)
+            var removed: [String] = []
+            for slug in (ModelRegistry.layoutList(old?.Entfernt ?? [:], group.id) ?? []) + Array(removedSinceSave[group.id.lowercased()] ?? [])
+            where !contains(local, slug) && !contains(removed, slug) {
+                removed.append(slug)
+            }
+            var nodes = group.models.map { node($0.slug, $0.displayName, $0.hasCustomDisplayName, $0.isUserDefined, $0.isHidden) }
+            // Eintraege, die es nur auf anderen Rechnern gibt (z. B. deren LM-Studio-Modelle), behalten.
+            for entry in ModelRegistry.layoutList(old?.Modelle ?? [:], group.id) ?? []
+            where !contains(local, entry.Slug) && !contains(removed, entry.Slug) {
+                nodes.append(node(entry.Slug, entry.Name, entry.EigenerName, entry.Eigen, entry.Ausgeblendet))
+            }
+            modelle[group.id] = .array(nodes)
+            entfernt[group.id] = .array(removed.map { JSONNode.string($0) })
+        }
+        for id in old?.Gruppen ?? [] where !contains(ids, id) {
+            ids.append(id)
+            if let list = ModelRegistry.layoutList(old?.Modelle ?? [:], id) {
+                modelle[id] = .array(list.map { node($0.Slug, $0.Name, $0.EigenerName, $0.Eigen, $0.Ausgeblendet) })
+            }
+            if let list = ModelRegistry.layoutList(old?.Entfernt ?? [:], id) { entfernt[id] = .array(list.map { JSONNode.string($0) }) }
+        }
+        removedSinceSave = [:]
+        let root = JSONNode.object()
+        root["Gruppen"] = .array(ids.map { JSONNode.string($0) })
+        root["Modelle"] = modelle
+        root["Entfernt"] = entfernt
+        let json = root.serialized()
+        if json == layoutText { return }
+        guard Paths.writeAtomic(json, to: ModelRegistry.layoutPath) else {
+            Logger.shared.error("ModelRegistry", "saveLayout", "Anordnung konnte nicht geschrieben werden")
+            return
+        }
+        layoutText = json
+        ModelRegistry.pushLayout()
+    }
+
+    /// Pusht die Anordnung im Hintergrund, entprellt (mehrere schnelle Aenderungen = ein Commit) und
+    /// nacheinander auf einer eigenen Warteschlange, nie auf dem Main-Thread.
+    private static func pushLayout() {
+        layoutPushLock.lock()
+        if layoutPushQueued { layoutPushLock.unlock(); return }
+        layoutPushQueued = true
+        layoutPushLock.unlock()
+        layoutPushQueue.asyncAfter(deadline: .now() + 3) {
+            layoutPushLock.lock(); layoutPushQueued = false; layoutPushLock.unlock()
+            let result = RepoSync.commitAndPushFile(layoutPath, message: "OpenLauncher: Modell-Anordnung der Seitenleiste geändert")
+            if result.ok { Logger.shared.info("ModelRegistry", "pushLayout", result.message) }
+            else { Logger.shared.warn("ModelRegistry", "pushLayout", result.message) }
+        }
+    }
 
     @discardableResult
     func addModel(_ group: ModelGroupEntry, slug rawSlug: String, displayName: String) -> Bool {
@@ -188,7 +384,7 @@ final class ModelRegistry {
             hasCustomDisplayName: !trimmed.isEmpty,
             isUserDefined: true
         ))
-        save()
+        saveUserChange()
         Logger.shared.info("ModelRegistry", "addModel", "hinzugefügt: \(slug)", ["group": group.title])
         return true
     }
@@ -234,7 +430,10 @@ final class ModelRegistry {
         model.hasCustomDisplayName = hasCustomName
         model.isUserDefined = true
 
-        save()
+        if group !== targetGroup || oldSlug.caseInsensitiveCompare(normalized) != .orderedSame {
+            markRemoved(group, oldSlug)
+        }
+        saveUserChange()
         Logger.shared.info("ModelRegistry", "updateModel", "bearbeitet: \(oldSlug) -> \(normalized)",
                            ["group": group.title, "target": targetGroup.title])
         return true
@@ -243,11 +442,12 @@ final class ModelRegistry {
     func removeAt(_ group: ModelGroupEntry, index: Int) {
         guard index >= 0 && index < group.models.count else { return }
         let model = group.models.remove(at: index)
+        markRemoved(group, model.slug)
         if ModelRegistry.isLiveCatalogGroup(group.id) {
             ModelRegistry.addUnique(&group.hiddenModelSlugs, model.slug)
             ModelRegistry.addUnique(&group.knownSyncedModelSlugs, model.slug)
         }
-        save()
+        saveUserChange()
         Logger.shared.info("ModelRegistry", "removeAt", "entfernt: \(model.slug)", ["group": group.title])
     }
 
@@ -260,7 +460,7 @@ final class ModelRegistry {
         let item = group.models.remove(at: from)
         if to > from { to -= 1 }
         group.models.insert(item, at: Swift.min(Swift.max(to, 0), group.models.count))
-        save()
+        saveUserChange()
         Logger.shared.info("ModelRegistry", "moveModel", "\(group.title):\(from) -> \(to)")
     }
 
@@ -281,6 +481,7 @@ final class ModelRegistry {
         }
 
         sourceGroup.models.remove(at: from)
+        markRemoved(sourceGroup, item.slug)
         item.slug = targetSlug
         item.providerId = targetGroup.providerId
         item.providerName = targetGroup.providerName
@@ -288,7 +489,7 @@ final class ModelRegistry {
         if to < 0 { to = targetGroup.models.count }
         if to > targetGroup.models.count { to = targetGroup.models.count }
         targetGroup.models.insert(item, at: to)
-        save()
+        saveUserChange()
         Logger.shared.info("ModelRegistry", "moveModel", "\(sourceGroup.title):\(from) -> \(targetGroup.title):\(to)")
         return true
     }
@@ -297,7 +498,7 @@ final class ModelRegistry {
         guard from >= 0, from < groups.count, to >= 0, to < groups.count, from != to else { return }
         let item = groups.remove(at: from)
         groups.insert(item, at: to)
-        save()
+        saveUserChange()
         Logger.shared.info("ModelRegistry", "moveGroup", "\(from) -> \(to)")
     }
 
@@ -478,22 +679,13 @@ final class ModelRegistry {
                     ModelRegistry.addUnique(&group.knownSyncedModelSlugs, definition.slug)
                 }
 
+                // Altmodelle entfernen (auch ausgeblendete). Reihenfolge und Sichtbarkeit der uebrigen
+                // bleiben unangetastet: frueher wurde hier bei jedem Start isHidden=false gesetzt, dadurch
+                // kam z. B. GPT-5.6 Terra nach jedem Update wieder (Windows 1.24.133).
                 let current = Set(ModelRegistry.gpt56Models.map { $0.slug })
                 group.models.removeAll { !current.contains($0.slug.lowercased()) }
-                group.hiddenModelSlugs = []
-                group.knownSyncedModelSlugs = ModelRegistry.gpt56Models.map { $0.slug }
-                for definition in ModelRegistry.gpt56Models {
-                    let model: ModelEntry
-                    if let existing = group.models.first(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
-                        model = existing
-                    } else {
-                        model = ModelRegistry.model(definition.slug, definition.displayName, "openai", "OpenAI")
-                        group.models.append(model)
-                    }
-                    model.slug = definition.slug
-                    model.displayName = definition.displayName
+                for model in group.models {
                     model.isUserDefined = true
-                    model.isHidden = false
                 }
             }
 

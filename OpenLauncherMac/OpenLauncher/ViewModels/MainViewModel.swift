@@ -958,7 +958,7 @@ final class MainViewModel {
         model.isHidden = true
         hiddenModels.append(model)
         hasHiddenModels = true
-        registry.save()
+        registry.saveUserChange()
 
         if selectedModel === model {
             selectedModel = group.models.dropFirst(index + 1).first { !$0.isHidden }
@@ -978,7 +978,7 @@ final class MainViewModel {
         model.isHidden = false
         hiddenModels.removeAll { $0 === model }
         hasHiddenModels = !hiddenModels.isEmpty
-        registry.save()
+        registry.saveUserChange()
         if selectedModel == nil { selectedModel = model }
         statusText = "Modell '\(model.displayName)' wieder eingeblendet."
         delegate?.modelGroupsChanged()
@@ -1066,6 +1066,12 @@ final class MainViewModel {
         // arbeitet die neue Sitzung mit dem veralteten Stand dieses Rechners. Scheitert es, wird trotzdem gestartet.
         let sync = RepoSync.pull()
         if !sync.ok { Logger.shared.warn("MainViewModel", "start", "Repo-Abgleich: \(sync.message)") }
+        else if registry.reloadLayoutIfChanged() {
+            modelGroups = registry.groups
+            refreshHiddenModels()
+            if selectedModel?.isHidden == true { selectedModel = modelGroups.flatMap(\.models).first { !$0.isHidden } }
+            delegate?.modelGroupsChanged()
+        }
 
         do {
             let thinkingLevel = selectedThinkingOption?.commandValue

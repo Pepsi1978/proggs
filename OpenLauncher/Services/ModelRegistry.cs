@@ -135,6 +135,7 @@ public sealed class ModelRegistry
                         {
                             reg.Groups = parsedGroups;
                             reg.RepairAndNormalize();
+                            reg.ApplyStoredLayout();
                             reg.Save();
                             Logger.Instance.Info("ModelRegistry", "Load", $"{parsedGroups.Count} Modellgruppen geladen", new { FilePath });
                             return reg;
@@ -145,6 +146,7 @@ public sealed class ModelRegistry
                     if (oldList != null && oldList.Any(m => !string.IsNullOrWhiteSpace(m.Slug)))
                     {
                         reg.Groups = CreateDefaults(oldList);
+                        reg.ApplyStoredLayout();
                         reg.Save();
                         Logger.Instance.Info("ModelRegistry", "Load", $"{oldList.Count} Modelle aus alter Liste migriert", new { FilePath });
                         return reg;
@@ -156,6 +158,7 @@ public sealed class ModelRegistry
                 {
                     reg.Groups = groups;
                     reg.RepairAndNormalize();
+                    reg.ApplyStoredLayout();
                     reg.Save();
                     Logger.Instance.Info("ModelRegistry", "Load", $"{groups.Count} Modellgruppen geladen", new { FilePath });
                     return reg;
@@ -169,6 +172,7 @@ public sealed class ModelRegistry
         }
 
         reg.Groups = CreateDefaults();
+        reg.ApplyStoredLayout();
         reg.Save();
         return reg;
     }
@@ -223,13 +227,247 @@ public sealed class ModelRegistry
             // Atomar schreiben (Temp + Move) — konsistent mit dem übrigen Persistenz-Code. Ein Absturz
             // mitten in File.WriteAllText würde models.json sonst abschneiden; Load() fiele beim nächsten
             // Start still auf Defaults zurück und verlöre Modell-Liste, -Reihenfolge und Hidden-State.
+            var json = JsonSerializer.Serialize(Groups, JsonOpts).Replace("\r\n", "\n");
+            // Unveraenderten Inhalt nicht neu schreiben: sonst erzeugt jeder Start eine Scheinaenderung,
+            // die beim naechsten Update mit dem Upstream kollidiert. LF wie im Repo (*.json eol=lf).
+            if (File.Exists(FilePath) && File.ReadAllText(FilePath).Replace("\r\n", "\n") == json) return;
             var tmp = FilePath + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(Groups, JsonOpts));
+            File.WriteAllText(tmp, json);
             File.Move(tmp, FilePath, overwrite: true);
         }
         catch (Exception ex)
         {
             Logger.Instance.Error("ModelRegistry", "Save", ex.Message);
+        }
+    }
+
+    // ===================== Anordnung (Reihenfolge + Sichtbarkeit) =====================
+
+    /// <summary>
+    /// Die gemeinsame Modell-Anordnung aller Rechner: Gruppenreihenfolge, je Gruppe die Modelle in ihrer
+    /// Reihenfolge (mit Name, eigenem Eintrag, Ausgeblendet) und vom Nutzer entfernte Modelle. Liegt
+    /// versioniert neben models.json, wird aber NUR bei Bedienaktionen (Verschieben, Aus-/Einblenden,
+    /// Hinzufuegen, Bearbeiten, Entfernen) geschrieben und sofort committet und gepusht. models.json bleibt
+    /// der rechnerabhaengige Katalog (LM Studio, OpenRouter-Abgleich, Aufklappzustand); die Anordnung wird
+    /// beim Laden und nach jedem Repo-Abgleich darueber gelegt. Kein Update und kein Katalog-Abgleich
+    /// aendert so Reihenfolge oder Sichtbarkeit, und jeder Rechner (auch Jarvis) zeigt denselben Stand.
+    /// Modelle, die die Anordnung noch nicht kennt, haengen hinten an.
+    /// </summary>
+    public static string LayoutPath { get; } = Path.Combine(Dir, "model-layout.json");
+
+    private sealed class ModelLayout
+    {
+        public List<string> Gruppen { get; set; } = new();
+        public Dictionary<string, List<LayoutModel>> Modelle { get; set; } = new();
+        public Dictionary<string, List<string>> Entfernt { get; set; } = new();
+    }
+
+    private sealed class LayoutModel
+    {
+        public string Slug { get; set; } = "";
+        public string Name { get; set; } = "";
+        public bool EigenerName { get; set; }
+        public bool Eigen { get; set; }
+        public bool Ausgeblendet { get; set; }
+    }
+
+    private string? _layoutText;
+    private readonly Dictionary<string, HashSet<string>> _removedSinceSave = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim LayoutPushLock = new(1, 1);
+    private static int _layoutPushQueued;
+
+    private static ModelLayout? ReadLayout(out string? text)
+    {
+        text = null;
+        try
+        {
+            if (!File.Exists(LayoutPath)) return null;
+            text = File.ReadAllText(LayoutPath).Replace("\r\n", "\n");
+            return JsonSerializer.Deserialize<ModelLayout>(text, JsonOpts);
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "ReadLayout", $"Anordnung nicht lesbar: {ex.Message}", new { LayoutPath });
+            return null;
+        }
+    }
+
+    private void ApplyStoredLayout()
+    {
+        var layout = ReadLayout(out var text);
+        if (layout == null) return;
+        _layoutText = text;
+        ApplyLayout(layout);
+    }
+
+    /// <summary>
+    /// Nach einem Repo-Abgleich: hat ein anderer Rechner eine neue Anordnung gepusht, sie uebernehmen.
+    /// </summary>
+    public bool ReloadLayoutIfChanged()
+    {
+        var layout = ReadLayout(out var text);
+        if (layout == null || text == _layoutText) return false;
+        _layoutText = text;
+        var changed = ApplyLayout(layout);
+        if (changed) Save();
+        Logger.Instance.Info("ModelRegistry", "ReloadLayoutIfChanged", "Neue Anordnung aus dem Repo übernommen", new { changed });
+        return changed;
+    }
+
+    private static List<T>? FindLayoutList<T>(Dictionary<string, List<T>> map, string groupId) =>
+        map.FirstOrDefault(pair => string.Equals(pair.Key, groupId, StringComparison.OrdinalIgnoreCase)).Value;
+
+    private bool ApplyLayout(ModelLayout layout)
+    {
+        var changed = false;
+        var target = 0;
+        foreach (var id in layout.Gruppen)
+        {
+            var index = Groups.ToList().FindIndex(g => string.Equals(g.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (index < target) continue;
+            if (index != target) { Groups.Move(index, target); changed = true; }
+            target++;
+        }
+
+        foreach (var group in Groups)
+        {
+            var entries = FindLayoutList(layout.Modelle, group.Id) ?? new List<LayoutModel>();
+            var removed = (FindLayoutList(layout.Entfernt, group.Id) ?? new List<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var listed = entries.Select(e => e.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var model in group.Models.Where(m => removed.Contains(m.Slug) && !listed.Contains(m.Slug)).ToList())
+            {
+                group.Models.Remove(model);
+                changed = true;
+            }
+
+            var position = 0;
+            foreach (var entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Slug)) continue;
+                var index = group.Models.ToList().FindIndex(m => string.Equals(m.Slug, entry.Slug, StringComparison.OrdinalIgnoreCase));
+                if (index < 0)
+                {
+                    // Auf einem anderen Rechner hinzugefuegt: eigene Eintraege uebernehmen. Katalogmodelle,
+                    // die es hier nicht gibt (z. B. fremde LM-Studio-Modelle), nicht vortaeuschen.
+                    if (!entry.Eigen) continue;
+                    var added = Model(entry.Slug, string.IsNullOrWhiteSpace(entry.Name) ? ToDisplayName(entry.Slug) : entry.Name,
+                        group.ProviderId, group.ProviderName);
+                    added.IsUserDefined = true;
+                    added.HasCustomDisplayName = entry.EigenerName;
+                    group.Models.Insert(Math.Min(position, group.Models.Count), added);
+                    index = position;
+                    changed = true;
+                }
+                if (index < position) continue;
+                if (index != position) { group.Models.Move(index, position); changed = true; }
+                var model = group.Models[position];
+                if (model.IsHidden != entry.Ausgeblendet) { model.IsHidden = entry.Ausgeblendet; changed = true; }
+                if (entry.Eigen && !model.IsUserDefined) { model.IsUserDefined = true; changed = true; }
+                if (entry.EigenerName && !string.IsNullOrWhiteSpace(entry.Name) &&
+                    (!model.HasCustomDisplayName || model.DisplayName != entry.Name))
+                {
+                    model.DisplayName = entry.Name;
+                    model.HasCustomDisplayName = true;
+                    changed = true;
+                }
+                position++;
+            }
+            group.RefreshHeaderText();
+        }
+        return changed;
+    }
+
+    /// <summary>Speichert nach einer Bedienaktion Katalog und Anordnung und pusht die Anordnung.</summary>
+    public void SaveUserChange()
+    {
+        Save();
+        SaveLayout();
+    }
+
+    /// <summary>Merkt ein vom Nutzer entferntes Modell, damit es auf allen Rechnern verschwindet.</summary>
+    private void MarkRemoved(ModelGroupEntry group, string slug)
+    {
+        if (!_removedSinceSave.TryGetValue(group.Id, out var set))
+            _removedSinceSave[group.Id] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        set.Add(slug);
+    }
+
+    private void SaveLayout()
+    {
+        try
+        {
+            var old = ReadLayout(out _);
+            var layout = new ModelLayout();
+            foreach (var group in Groups)
+            {
+                layout.Gruppen.Add(group.Id);
+                var local = group.Models.Select(m => m.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var removed = (FindLayoutList(old?.Entfernt ?? new(), group.Id) ?? new List<string>())
+                    .Concat(_removedSinceSave.TryGetValue(group.Id, out var now) ? now : Enumerable.Empty<string>())
+                    .Where(slug => !local.Contains(slug))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                var entries = group.Models.Select(m => new LayoutModel
+                {
+                    Slug = m.Slug,
+                    Name = m.DisplayName,
+                    EigenerName = m.HasCustomDisplayName,
+                    Eigen = m.IsUserDefined,
+                    Ausgeblendet = m.IsHidden
+                }).ToList();
+                // Eintraege, die es nur auf anderen Rechnern gibt (z. B. deren LM-Studio-Modelle), behalten.
+                foreach (var entry in FindLayoutList(old?.Modelle ?? new(), group.Id) ?? new List<LayoutModel>())
+                    if (!local.Contains(entry.Slug) && !removed.Contains(entry.Slug, StringComparer.OrdinalIgnoreCase))
+                        entries.Add(entry);
+                layout.Modelle[group.Id] = entries;
+                layout.Entfernt[group.Id] = removed;
+            }
+            foreach (var id in old?.Gruppen ?? new List<string>())
+            {
+                if (layout.Gruppen.Contains(id, StringComparer.OrdinalIgnoreCase)) continue;
+                layout.Gruppen.Add(id);
+                if (FindLayoutList(old!.Modelle, id) is { } m) layout.Modelle[id] = m;
+                if (FindLayoutList(old!.Entfernt, id) is { } r) layout.Entfernt[id] = r;
+            }
+            _removedSinceSave.Clear();
+
+            var json = JsonSerializer.Serialize(layout, JsonOpts).Replace("\r\n", "\n");
+            if (json == _layoutText) return;
+            var tmp = LayoutPath + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, LayoutPath, overwrite: true);
+            _layoutText = json;
+            _ = PushLayoutAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Error("ModelRegistry", "SaveLayout", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Pusht die Anordnung im Hintergrund, entprellt (mehrere schnelle Aenderungen = ein Commit) und
+    /// nacheinander, damit sich zwei Laeufe nie im selben Repo ueberholen.
+    /// </summary>
+    private static async Task PushLayoutAsync()
+    {
+        if (Interlocked.Exchange(ref _layoutPushQueued, 1) == 1) return;
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        await LayoutPushLock.WaitAsync();
+        try
+        {
+            Interlocked.Exchange(ref _layoutPushQueued, 0);
+            var result = await RepoSync.CommitAndPushFileAsync(LayoutPath, "OpenLauncher: Modell-Anordnung der Seitenleiste geändert");
+            if (result.Ok) Logger.Instance.Info("ModelRegistry", "PushLayoutAsync", result.Message);
+            else Logger.Instance.Warn("ModelRegistry", "PushLayoutAsync", result.Message);
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("ModelRegistry", "PushLayoutAsync", ex.Message);
+        }
+        finally
+        {
+            LayoutPushLock.Release();
         }
     }
 
@@ -250,7 +488,7 @@ public sealed class ModelRegistry
             ProviderId = group.ProviderId,
             ProviderName = group.ProviderName
         });
-        Save();
+        SaveUserChange();
         Logger.Instance.Info("ModelRegistry", "AddModel", $"hinzugefügt: {slug}", new { group = group.Title, displayName });
         return true;
     }
@@ -300,8 +538,10 @@ public sealed class ModelRegistry
         model.DisplayName = hasCustomName ? displayName.Trim() : ToDisplayName(normalized);
         model.HasCustomDisplayName = hasCustomName;
         model.IsUserDefined = true;
+        if (!ReferenceEquals(group, targetGroup) || !string.Equals(oldSlug, normalized, StringComparison.OrdinalIgnoreCase))
+            MarkRemoved(group, oldSlug);
 
-        Save();
+        SaveUserChange();
         group.RefreshHeaderText();
         targetGroup.RefreshHeaderText();
         Logger.Instance.Info("ModelRegistry", "UpdateModel", $"bearbeitet: {oldSlug} -> {normalized}",
@@ -314,12 +554,13 @@ public sealed class ModelRegistry
         if (index < 0 || index >= group.Models.Count) return;
         var m = group.Models[index];
         group.Models.RemoveAt(index);
+        MarkRemoved(group, m.Slug);
         if (IsLiveCatalogGroup(group.Id))
         {
             AddUnique(group.HiddenModelSlugs, m.Slug);
             AddUnique(group.KnownSyncedModelSlugs, m.Slug);
         }
-        Save();
+        SaveUserChange();
         Logger.Instance.Info("ModelRegistry", "RemoveAt", $"entfernt: {m.Slug}", new { group = group.Title });
     }
 
@@ -333,7 +574,7 @@ public sealed class ModelRegistry
         group.Models.RemoveAt(from);
         if (to > from) to--;
         group.Models.Insert(Math.Clamp(to, 0, group.Models.Count), item);
-        Save();
+        SaveUserChange();
         Logger.Instance.Info("ModelRegistry", "MoveModel", $"{group.Title}:{from} -> {to}");
     }
 
@@ -355,13 +596,14 @@ public sealed class ModelRegistry
         }
 
         sourceGroup.Models.RemoveAt(from);
+        MarkRemoved(sourceGroup, item.Slug);
         item.Slug = targetSlug;
         item.ProviderId = targetGroup.ProviderId;
         item.ProviderName = targetGroup.ProviderName;
         if (to < 0) to = targetGroup.Models.Count;
         if (to > targetGroup.Models.Count) to = targetGroup.Models.Count;
         targetGroup.Models.Insert(to, item);
-        Save();
+        SaveUserChange();
         sourceGroup.RefreshHeaderText();
         targetGroup.RefreshHeaderText();
         Logger.Instance.Info("ModelRegistry", "MoveModel", $"{sourceGroup.Title}:{from} -> {targetGroup.Title}:{to}");
@@ -374,7 +616,7 @@ public sealed class ModelRegistry
         var item = Groups[from];
         Groups.RemoveAt(from);
         Groups.Insert(to, item);
-        Save();
+        SaveUserChange();
         Logger.Instance.Info("ModelRegistry", "MoveGroup", $"{from} -> {to}");
     }
 
@@ -581,23 +823,17 @@ public sealed class ModelRegistry
                     AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
                 }
 
-                // Auch ausgeblendete Altmodelle entfernen: sie dürfen nicht in Listen zurückkehren.
+                // Altmodelle entfernen (auch ausgeblendete: sie dürfen nicht in Listen zurückkehren).
+                // Reihenfolge und Sichtbarkeit der übrigen bleiben unangetastet: Früher wurde hier bei
+                // jedem Start IsHidden=false gesetzt, dadurch kam z. B. GPT-5.6 Terra nach jedem Update
+                // wieder. Fehlt ein aktuelles Modell, nur weil es per Merker schon bekannt war, bleibt es
+                // weg (vom Nutzer entfernt).
                 foreach (var model in group.Models.Where(m => !Gpt56Models.Any(d => d.Slug.Equals(m.Slug, StringComparison.OrdinalIgnoreCase))).ToList())
                     group.Models.Remove(model);
-                group.HiddenModelSlugs.Clear();
-                group.KnownSyncedModelSlugs = Gpt56Models.Select(d => d.Slug).ToList();
-                foreach (var definition in Gpt56Models)
+                foreach (var model in group.Models)
                 {
-                    var model = group.Models.FirstOrDefault(m => definition.Slug.Equals(m.Slug, StringComparison.OrdinalIgnoreCase));
-                    if (model == null)
-                    {
-                        model = Model(definition.Slug, definition.DisplayName, "openai", "OpenAI");
-                        group.Models.Add(model);
-                    }
-                    model.Slug = definition.Slug;
-                    model.DisplayName = definition.DisplayName;
+                    // Direktmodelle: ConfigureProvider braucht IsUserDefined für den provider.openai.models-Eintrag.
                     model.IsUserDefined = true;
-                    model.IsHidden = false;
                 }
             }
 

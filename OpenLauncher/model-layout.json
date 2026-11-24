@@ -1,0 +1,3718 @@
+{
+  "Gruppen": [
+    "entropic",
+    "openai",
+    "google",
+    "moonshot",
+    "opencode-zen-free",
+    "openrouter-free",
+    "openrouter",
+    "nvidia",
+    "lmstudio"
+  ],
+  "Modelle": {
+    "entropic": [
+      {
+        "Slug": "claude-fable-5-2[1m]",
+        "Name": "Claude Fable 5.2",
+        "EigenerName": true,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "claude-opus-5-5[1m]",
+        "Name": "Claude Opus 5.5",
+        "EigenerName": true,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "claude-sonnet-5-5[1m]",
+        "Name": "Claude Sonnet 5.5",
+        "EigenerName": true,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "claude-haiku-5-5",
+        "Name": "Claude Haiku 5.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      }
+    ],
+    "openai": [
+      {
+        "Slug": "gpt-6.2-astra",
+        "Name": "GPT-6.2 Astra",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gpt-6.2-sol",
+        "Name": "GPT-6.2 Sol",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gpt-6.1-terra",
+        "Name": "GPT-6.1 Terra",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gpt-6-luna",
+        "Name": "GPT-6 Luna",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gpt-5.6-terra",
+        "Name": "GPT-5.6 Terra",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": true
+      }
+    ],
+    "google": [
+      {
+        "Slug": "gemini-4-carbon",
+        "Name": "Gemini 4 Carbon",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gemini-4-neon",
+        "Name": "Gemini 4 Neon",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gemini-4-argon",
+        "Name": "Gemini 4 Argon",
+        "EigenerName": true,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gemini-4-hydrogen",
+        "Name": "Gemini 4 Hydrogen",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gemini-3.8-flash",
+        "Name": "Gemini 3.8 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      }
+    ],
+    "moonshot": [
+      {
+        "Slug": "k3.1-pro",
+        "Name": "Kimi K3.1 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "k3.1-pro-highspeed",
+        "Name": "Kimi K3.1 Pro HighSpeed",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "k3-256k",
+        "Name": "Kimi K3 256K",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "k3",
+        "Name": "Kimi K3 (1M)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "kimi-for-coding",
+        "Name": "Kimi for Coding (K2.8 Preview)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "kimi-for-coding-highspeed",
+        "Name": "Kimi for Coding HighSpeed",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      }
+    ],
+    "opencode-zen-free": [
+      {
+        "Slug": "big-pickle",
+        "Name": "Big Pickle",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "nemotron-3.5-lightning-free",
+        "Name": "Nemotron 3.5 Lightning Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mimo-v2.6-flash-free",
+        "Name": "MiMo-V2.6-Flash Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "beam-free",
+        "Name": "Beam Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek-v4.1-flash-free",
+        "Name": "DeepSeek V4.1 Flash Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "flint-40b-free",
+        "Name": "Flint 40B Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "glm-5.3-flash-free",
+        "Name": "GLM-5.3-Flash Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nemotron-3.5-super-vl-free",
+        "Name": "Nemotron 3.5 Super VL Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      }
+    ],
+    "openrouter-free": [
+      {
+        "Slug": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "Name": "NVIDIA Nemotron 3 Ultra Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3.5-lightning:free",
+        "Name": "NVIDIA Nemotron 3.5 Lightning Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "poolside/laguna-xs-2.1:free",
+        "Name": "Poolside Laguna XS 2.1 Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "nvidia/nemotron-3-super-120b-a12b:free",
+        "Name": "NVIDIA Nemotron 3 Super Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "google/gemma-4-31b-it:free",
+        "Name": "Google Gemma 4 31B Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "poolside/laguna-s-2.1:free",
+        "Name": "Poolside Laguna S 2.1 Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "minimax/minimax-m2.7:free",
+        "Name": "MiniMax MiniMax M2.7 Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "stealth/space-bunny-alpha",
+        "Name": "Space Bunny Alpha",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3.5-super-vl:free",
+        "Name": "NVIDIA Nemotron 3.5 Super VL Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "recursive/flint-v1.0:free",
+        "Name": "Recursive Flint Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "baidu/ernie-5.5-flash-preview:free",
+        "Name": "Baidu ERNIE-5.5-Flash-Preview Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inclusionai/ling-3.2-flash:free",
+        "Name": "inclusionAI Ling 3.2 Flash Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "liquid/lfm-3-1.7b:free",
+        "Name": "LiquidAI LFM3-1.7B Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "particle-ai/particle-1:free",
+        "Name": "Particle AI Particle-1 Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "dots-studio/dots-3-note-preview:free",
+        "Name": "Dots Studio Dots3-Note Preview Free",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      }
+    ],
+    "openrouter": [
+      {
+        "Slug": "moonshotai/kimi-k3",
+        "Name": "MoonshotAI: Kimi K3",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.3",
+        "Name": "Z.ai: GLM 5.3",
+        "EigenerName": false,
+        "Eigen": true,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.2",
+        "Name": "Z.ai: GLM 5.2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m3",
+        "Name": "MiniMax: MiniMax M3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.7-max",
+        "Name": "Qwen: Qwen3.7 Max",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "xiaomi/mimo-v2.5-pro",
+        "Name": "Xiaomi: MiMo-V2.5-Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4-pro",
+        "Name": "DeepSeek: DeepSeek V4 Pro 0423",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4-flash",
+        "Name": "DeepSeek: DeepSeek V4 Flash 0423",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "xiaomi/mimo-v2.5",
+        "Name": "Xiaomi: MiMo-V2.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "aion-labs/aion-2.0",
+        "Name": "AionLabs: Aion-2.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "aion-labs/aion-3.0",
+        "Name": "AionLabs: Aion-3.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "aion-labs/aion-3.0-mini",
+        "Name": "AionLabs: Aion-3.0-Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "aion-labs/aion-rp-llama-3.1-8b",
+        "Name": "AionLabs: Aion-RP 1.0 (8B)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "amazon/nova-2-lite-v1",
+        "Name": "Amazon: Nova 2 Lite",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "amazon/nova-lite-v1",
+        "Name": "Amazon: Nova Lite 1.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "amazon/nova-micro-v1",
+        "Name": "Amazon: Nova Micro 1.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "amazon/nova-premier-v1",
+        "Name": "Amazon: Nova Premier 1.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "amazon/nova-pro-v1",
+        "Name": "Amazon: Nova Pro 1.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~anthropic/claude-haiku-latest",
+        "Name": "Anthropic: Claude Haiku Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~anthropic/claude-sonnet-latest",
+        "Name": "Anthropic: Claude Sonnet Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-fable-5",
+        "Name": "Anthropic: Claude Fable 5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-fable-5:batch",
+        "Name": "Anthropic: Claude Fable 5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-fable-5.1",
+        "Name": "Anthropic: Claude Fable 5.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-fable-5.1:batch",
+        "Name": "Anthropic: Claude Fable 5.1 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~anthropic/claude-fable-latest",
+        "Name": "Anthropic: Claude Fable Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-haiku-4.5",
+        "Name": "Anthropic: Claude Haiku 4.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-haiku-4.5:batch",
+        "Name": "Anthropic: Claude Haiku 4.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.1",
+        "Name": "Anthropic: Claude Opus 4.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.1:batch",
+        "Name": "Anthropic: Claude Opus 4.1 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.5",
+        "Name": "Anthropic: Claude Opus 4.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.5:batch",
+        "Name": "Anthropic: Claude Opus 4.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.6",
+        "Name": "Anthropic: Claude Opus 4.6",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.6:batch",
+        "Name": "Anthropic: Claude Opus 4.6 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.7",
+        "Name": "Anthropic: Claude Opus 4.7",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.7:batch",
+        "Name": "Anthropic: Claude Opus 4.7 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.8",
+        "Name": "Anthropic: Claude Opus 4.8",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-4.8:batch",
+        "Name": "Anthropic: Claude Opus 4.8 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~anthropic/claude-opus-latest",
+        "Name": "Anthropic: Claude Opus Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-4.5",
+        "Name": "Anthropic: Claude Sonnet 4.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-4.5:batch",
+        "Name": "Anthropic: Claude Sonnet 4.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-4.6",
+        "Name": "Anthropic: Claude Sonnet 4.6",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-4.6:batch",
+        "Name": "Anthropic: Claude Sonnet 4.6 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-5",
+        "Name": "Anthropic: Claude Sonnet 5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-5:batch",
+        "Name": "Anthropic: Claude Sonnet 5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "auto",
+        "Name": "Auto Router",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "auto-beta",
+        "Name": "Auto Router (Beta)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bodybuilder",
+        "Name": "Body Builder (beta)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance-seed/seed-1.6",
+        "Name": "ByteDance Seed: Seed 1.6",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance-seed/seed-1.6-flash",
+        "Name": "ByteDance Seed: Seed 1.6 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance-seed/seed-2-1-turbo",
+        "Name": "ByteDance Seed: Seed 2.1 Turbo",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance-seed/seed-2.0-code",
+        "Name": "ByteDance Seed: Seed-2.0-Code",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance-seed/seed-2.0-lite",
+        "Name": "ByteDance Seed: Seed-2.0-Lite",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance-seed/seed-2.0-mini",
+        "Name": "ByteDance Seed: Seed-2.0-Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "bytedance/ui-tars-1.5-7b",
+        "Name": "ByteDance: UI-TARS 7B ",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-5",
+        "Name": "Anthropic: Claude Opus 5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-5:batch",
+        "Name": "Anthropic: Claude Opus 5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "cohere/command-a",
+        "Name": "Cohere: Command A",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "cohere/command-r-08-2024",
+        "Name": "Cohere: Command R (08-2024)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "cohere/command-r-plus-08-2024",
+        "Name": "Cohere: Command R+ (08-2024)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "cohere/command-r7b-12-2024",
+        "Name": "Cohere: Command R7B (12-2024)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~deepseek/deepseek-v4-flash-latest",
+        "Name": "DeepSeek: DeepSeek V4 Flash Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-chat",
+        "Name": "DeepSeek: DeepSeek V3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-chat-v3-0324",
+        "Name": "DeepSeek: DeepSeek V3 0324",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-chat-v3.1",
+        "Name": "DeepSeek: DeepSeek V3.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v3.1-terminus",
+        "Name": "DeepSeek: DeepSeek V3.1 Terminus",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v3.2",
+        "Name": "DeepSeek: DeepSeek V3.2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v3.2-exp",
+        "Name": "DeepSeek: DeepSeek V3.2 Exp",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4-flash-0731",
+        "Name": "DeepSeek: DeepSeek V4 Flash 0731",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4-flash-vision-exp",
+        "Name": "DeepSeek: DeepSeek V4 Flash Vision Exp",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4-pro-0813",
+        "Name": "DeepSeek: DeepSeek V4 Pro 0813",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-r1-0528",
+        "Name": "DeepSeek: R1 0528",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "free",
+        "Name": "Free Models Router",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~google/gemini-flash-latest",
+        "Name": "Google: Gemini Flash Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~google/gemini-pro-latest",
+        "Name": "Google: Gemini Pro Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-2.5-flash",
+        "Name": "Google: Gemini 2.5 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-2.5-flash-lite",
+        "Name": "Google: Gemini 2.5 Flash Lite",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-2.5-pro",
+        "Name": "Google: Gemini 2.5 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-2.5-pro-preview",
+        "Name": "Google: Gemini 2.5 Pro Preview 06-05",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3-flash-preview",
+        "Name": "Google: Gemini 3 Flash Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3-flash-preview:batch",
+        "Name": "Google: Gemini 3 Flash Preview (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-flash-lite",
+        "Name": "Google: Gemini 3.1 Flash Lite",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-flash-lite:batch",
+        "Name": "Google: Gemini 3.1 Flash Lite (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-flash-lite-preview",
+        "Name": "Google: Gemini 3.1 Flash Lite Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-pro-preview",
+        "Name": "Google: Gemini 3.1 Pro Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-pro-preview:batch",
+        "Name": "Google: Gemini 3.1 Pro Preview (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-pro-preview-customtools",
+        "Name": "Google: Gemini 3.1 Pro Preview Custom Tools",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.5-flash",
+        "Name": "Google: Gemini 3.5 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.5-flash:batch",
+        "Name": "Google: Gemini 3.5 Flash (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.5-flash-lite",
+        "Name": "Google: Gemini 3.5 Flash Lite",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.5-flash-lite:batch",
+        "Name": "Google: Gemini 3.5 Flash Lite (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.6-flash",
+        "Name": "Google: Gemini 3.6 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.6-flash:batch",
+        "Name": "Google: Gemini 3.6 Flash (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.7-flash",
+        "Name": "Google: Gemini 3.7 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.7-flash:batch",
+        "Name": "Google: Gemini 3.7 Flash (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.8-flash",
+        "Name": "Google: Gemini 3.8 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.8-flash:batch",
+        "Name": "Google: Gemini 3.8 Flash (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-2-27b-it",
+        "Name": "Google: Gemma 2 27B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-3-12b-it",
+        "Name": "Google: Gemma 3 12B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-3-27b-it",
+        "Name": "Google: Gemma 3 27B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-3-4b-it",
+        "Name": "Google: Gemma 3 4B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-4-26b-a4b-it",
+        "Name": "Google: Gemma 4 26B A4B ",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-4-31b-it",
+        "Name": "Google: Gemma 4 31B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/lyria-3-clip-preview",
+        "Name": "Google: Lyria 3 Clip Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/lyria-3-pro-preview",
+        "Name": "Google: Lyria 3 Pro Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-2.5-flash-image",
+        "Name": "Google: Nano Banana (Gemini 2.5 Flash Image)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-flash-image-preview",
+        "Name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-flash-image",
+        "Name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3.1-flash-lite-image",
+        "Name": "Google: Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3-pro-image-preview",
+        "Name": "Google: Nano Banana Pro (Gemini 3 Pro Image Preview)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-3-pro-image",
+        "Name": "Google: Nano Banana Pro (Gemini 3 Pro Image)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "ibm-granite/granite-4.2-8b",
+        "Name": "IBM: Granite 4.2 8B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inception/mercury-2",
+        "Name": "Inception: Mercury 2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inclusionai/ling-3.0-flash",
+        "Name": "inclusionAI: Ling 3.0 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthracite-org/magnum-v4-72b",
+        "Name": "Magnum v4 72B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mancer/weaver",
+        "Name": "Mancer: Weaver (alpha)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meituan/longcat-2.0",
+        "Name": "Meituan: LongCat 2.0",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-3.1-70b-instruct",
+        "Name": "Meta: Llama 3.1 70B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-3.1-8b-instruct",
+        "Name": "Meta: Llama 3.1 8B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-3.2-1b-instruct",
+        "Name": "Meta: Llama 3.2 1B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-3.2-3b-instruct",
+        "Name": "Meta: Llama 3.2 3B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-3.3-70b-instruct",
+        "Name": "Meta: Llama 3.3 70B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-4-maverick",
+        "Name": "Meta: Llama 4 Maverick",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-4-scout",
+        "Name": "Meta: Llama 4 Scout",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta-llama/llama-guard-4-12b",
+        "Name": "Meta: Llama Guard 4 12B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-glimmer-30b",
+        "Name": "Meta: Muse Glimmer 30B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-spark-1.1",
+        "Name": "Meta: Muse Spark 1.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-spark-1.2",
+        "Name": "Meta: Muse Spark 1.2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-spark-1.2-contributor",
+        "Name": "Meta: Muse Spark 1.2 Contributor",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-spark-1.3",
+        "Name": "Meta: Muse Spark 1.3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-spark-1.3-contributor",
+        "Name": "Meta: Muse Spark 1.3 Contributor",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "microsoft/phi-4",
+        "Name": "Microsoft: Phi 4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m1",
+        "Name": "MiniMax: MiniMax M1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m2",
+        "Name": "MiniMax: MiniMax M2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m2-her",
+        "Name": "MiniMax: MiniMax M2-her",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m2.1",
+        "Name": "MiniMax: MiniMax M2.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m2.5",
+        "Name": "MiniMax: MiniMax M2.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m2.7",
+        "Name": "MiniMax: MiniMax M2.7",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-01",
+        "Name": "MiniMax: MiniMax-01",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-large",
+        "Name": "Mistral Large",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-large-2407",
+        "Name": "Mistral Large 2407",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/codestral-2508",
+        "Name": "Mistral: Codestral 2508",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/devstral-2512",
+        "Name": "Mistral: Devstral 2 2512",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/ministral-14b-2512",
+        "Name": "Mistral: Ministral 3 14B 2512",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/ministral-3b-2512",
+        "Name": "Mistral: Ministral 3 3B 2512",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/ministral-8b-2512",
+        "Name": "Mistral: Ministral 3 8B 2512",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-medium-3",
+        "Name": "Mistral: Mistral Medium 3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-medium-3.1",
+        "Name": "Mistral: Mistral Medium 3.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-medium-3-5",
+        "Name": "Mistral: Mistral Medium 3.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-medium-3-5:batch",
+        "Name": "Mistral: Mistral Medium 3.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-nemo",
+        "Name": "Mistral: Mistral Nemo",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-small-24b-instruct-2501",
+        "Name": "Mistral: Mistral Small 3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-small-3.1-24b-instruct",
+        "Name": "Mistral: Mistral Small 3.1 24B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-small-3.2-24b-instruct",
+        "Name": "Mistral: Mistral Small 3.2 24B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-small-2603",
+        "Name": "Mistral: Mistral Small 4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mixtral-8x22b-instruct",
+        "Name": "Mistral: Mixtral 8x22B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-saba",
+        "Name": "Mistral: Saba",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/voxtral-small-24b-2507",
+        "Name": "Mistral: Voxtral Small 24B 2507",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~moonshotai/kimi-latest",
+        "Name": "MoonshotAI: Kimi Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k2",
+        "Name": "MoonshotAI: Kimi K2 0711",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k2-0905",
+        "Name": "MoonshotAI: Kimi K2 0905",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k2-thinking",
+        "Name": "MoonshotAI: Kimi K2 Thinking",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k2.5",
+        "Name": "MoonshotAI: Kimi K2.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k2.6",
+        "Name": "MoonshotAI: Kimi K2.6",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k2.7-code",
+        "Name": "MoonshotAI: Kimi K2.7 Code",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "morph/morph-v3-fast",
+        "Name": "Morph: Morph V3 Fast",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "morph/morph-v3-large",
+        "Name": "Morph: Morph V3 Large",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "gryphe/mythomax-l2-13b",
+        "Name": "MythoMax 13B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nousresearch/hermes-3-llama-3.1-405b",
+        "Name": "Nous: Hermes 3 405B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nousresearch/hermes-3-llama-3.1-70b",
+        "Name": "Nous: Hermes 3 70B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nousresearch/hermes-4-405b",
+        "Name": "Nous: Hermes 4 405B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3-nano-30b-a3b",
+        "Name": "NVIDIA: Nemotron 3 Nano 30B A3B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3-super-120b-a12b",
+        "Name": "NVIDIA: Nemotron 3 Super",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3-ultra-550b-a55b",
+        "Name": "NVIDIA: Nemotron 3 Ultra",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3.5-content-safety",
+        "Name": "NVIDIA: Nemotron 3.5 Content Safety",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3.5-lightning",
+        "Name": "NVIDIA: Nemotron 3.5 Lightning",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~openai/gpt-mini-latest",
+        "Name": "OpenAI: GPT Mini Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-audio",
+        "Name": "OpenAI: GPT Audio",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-audio-mini",
+        "Name": "OpenAI: GPT Audio Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-chat-latest",
+        "Name": "OpenAI: GPT Chat Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-3.5-turbo-0613",
+        "Name": "OpenAI: GPT-3.5 Turbo (older v0613)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-3.5-turbo-16k",
+        "Name": "OpenAI: GPT-3.5 Turbo 16k",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4",
+        "Name": "OpenAI: GPT-4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4-turbo:batch",
+        "Name": "OpenAI: GPT-4 Turbo (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4.1",
+        "Name": "OpenAI: GPT-4.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4.1:batch",
+        "Name": "OpenAI: GPT-4.1 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4.1-mini",
+        "Name": "OpenAI: GPT-4.1 Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4.1-mini:batch",
+        "Name": "OpenAI: GPT-4.1 Mini (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4.1-nano",
+        "Name": "OpenAI: GPT-4.1 Nano",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4.1-nano:batch",
+        "Name": "OpenAI: GPT-4.1 Nano (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o",
+        "Name": "OpenAI: GPT-4o",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o-2024-05-13",
+        "Name": "OpenAI: GPT-4o (2024-05-13)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o-2024-08-06",
+        "Name": "OpenAI: GPT-4o (2024-08-06)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o-2024-11-20",
+        "Name": "OpenAI: GPT-4o (2024-11-20)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o:batch",
+        "Name": "OpenAI: GPT-4o (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o-mini",
+        "Name": "OpenAI: GPT-4o-mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o-mini-2024-07-18",
+        "Name": "OpenAI: GPT-4o-mini (2024-07-18)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-4o-mini:batch",
+        "Name": "OpenAI: GPT-4o-mini (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5",
+        "Name": "OpenAI: GPT-5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5:batch",
+        "Name": "OpenAI: GPT-5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-image",
+        "Name": "OpenAI: GPT-5 Image",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-image-mini",
+        "Name": "OpenAI: GPT-5 Image Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-mini",
+        "Name": "OpenAI: GPT-5 Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-mini:batch",
+        "Name": "OpenAI: GPT-5 Mini (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-nano",
+        "Name": "OpenAI: GPT-5 Nano",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-nano:batch",
+        "Name": "OpenAI: GPT-5 Nano (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-pro",
+        "Name": "OpenAI: GPT-5 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5-pro:batch",
+        "Name": "OpenAI: GPT-5 Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.1",
+        "Name": "OpenAI: GPT-5.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.1:batch",
+        "Name": "OpenAI: GPT-5.1 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.1-codex",
+        "Name": "OpenAI: GPT-5.1-Codex",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.1-codex-max",
+        "Name": "OpenAI: GPT-5.1-Codex-Max",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.1-codex-mini",
+        "Name": "OpenAI: GPT-5.1-Codex-Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.2",
+        "Name": "OpenAI: GPT-5.2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.2:batch",
+        "Name": "OpenAI: GPT-5.2 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.2-chat",
+        "Name": "OpenAI: GPT-5.2 Chat",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.2-pro",
+        "Name": "OpenAI: GPT-5.2 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.2-pro:batch",
+        "Name": "OpenAI: GPT-5.2 Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.2-codex",
+        "Name": "OpenAI: GPT-5.2-Codex",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.3-codex",
+        "Name": "OpenAI: GPT-5.3-Codex",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4",
+        "Name": "OpenAI: GPT-5.4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4:batch",
+        "Name": "OpenAI: GPT-5.4 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-image-2",
+        "Name": "OpenAI: GPT-5.4 Image 2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-mini",
+        "Name": "OpenAI: GPT-5.4 Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-mini:batch",
+        "Name": "OpenAI: GPT-5.4 Mini (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-nano",
+        "Name": "OpenAI: GPT-5.4 Nano",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-nano:batch",
+        "Name": "OpenAI: GPT-5.4 Nano (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-pro",
+        "Name": "OpenAI: GPT-5.4 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.4-pro:batch",
+        "Name": "OpenAI: GPT-5.4 Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.5",
+        "Name": "OpenAI: GPT-5.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.5:batch",
+        "Name": "OpenAI: GPT-5.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.5-pro",
+        "Name": "OpenAI: GPT-5.5 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.5-pro:batch",
+        "Name": "OpenAI: GPT-5.5 Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-luna",
+        "Name": "OpenAI: GPT-5.6 Luna",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-luna:batch",
+        "Name": "OpenAI: GPT-5.6 Luna (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-luna-pro",
+        "Name": "OpenAI: GPT-5.6 Luna Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-luna-pro:batch",
+        "Name": "OpenAI: GPT-5.6 Luna Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-sol",
+        "Name": "OpenAI: GPT-5.6 Sol",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-sol:batch",
+        "Name": "OpenAI: GPT-5.6 Sol (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-sol-pro",
+        "Name": "OpenAI: GPT-5.6 Sol Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-sol-pro:batch",
+        "Name": "OpenAI: GPT-5.6 Sol Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-terra",
+        "Name": "OpenAI: GPT-5.6 Terra",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-terra:batch",
+        "Name": "OpenAI: GPT-5.6 Terra (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-terra-pro",
+        "Name": "OpenAI: GPT-5.6 Terra Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-5.6-terra-pro:batch",
+        "Name": "OpenAI: GPT-5.6 Terra Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-120b",
+        "Name": "OpenAI: gpt-oss-120b",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-20b",
+        "Name": "OpenAI: gpt-oss-20b",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-safeguard-20b",
+        "Name": "OpenAI: gpt-oss-safeguard-20b",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/o3",
+        "Name": "OpenAI: o3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/o3:batch",
+        "Name": "OpenAI: o3 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/o3-mini:batch",
+        "Name": "OpenAI: o3 Mini (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/o3-pro",
+        "Name": "OpenAI: o3 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/o4-mini:batch",
+        "Name": "OpenAI: o4 Mini (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "fusion",
+        "Name": "OpenRouter: Fusion",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "pareto-code",
+        "Name": "Pareto Code Router",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perceptron/perceptron-mk1",
+        "Name": "Perceptron: Perceptron Mk1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perplexity/sonar",
+        "Name": "Perplexity: Sonar",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perplexity/sonar-deep-research",
+        "Name": "Perplexity: Sonar Deep Research",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perplexity/sonar-pro",
+        "Name": "Perplexity: Sonar Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perplexity/sonar-pro-search",
+        "Name": "Perplexity: Sonar Pro Search",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perplexity/sonar-reasoning-pro",
+        "Name": "Perplexity: Sonar Reasoning Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "poolside/laguna-s-2.1",
+        "Name": "Poolside: Laguna S 2.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "poolside/laguna-xs-2.1",
+        "Name": "Poolside: Laguna XS 2.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen-2.5-72b-instruct",
+        "Name": "Qwen2.5 72B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen-2.5-coder-32b-instruct",
+        "Name": "Qwen2.5 Coder 32B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen-plus",
+        "Name": "Qwen: Qwen-Plus",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen-2.5-7b-instruct",
+        "Name": "Qwen: Qwen2.5 7B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen2.5-vl-72b-instruct",
+        "Name": "Qwen: Qwen2.5 VL 72B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-14b",
+        "Name": "Qwen: Qwen3 14B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-235b-a22b-2507",
+        "Name": "Qwen: Qwen3 235B A22B Instruct 2507",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-235b-a22b-thinking-2507",
+        "Name": "Qwen: Qwen3 235B A22B Thinking 2507",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-30b-a3b",
+        "Name": "Qwen: Qwen3 30B A3B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-30b-a3b-instruct-2507",
+        "Name": "Qwen: Qwen3 30B A3B Instruct 2507",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-32b",
+        "Name": "Qwen: Qwen3 32B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-coder-30b-a3b-instruct",
+        "Name": "Qwen: Qwen3 Coder 30B A3B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-coder",
+        "Name": "Qwen: Qwen3 Coder 480B A35B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-coder-flash",
+        "Name": "Qwen: Qwen3 Coder Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-coder-next",
+        "Name": "Qwen: Qwen3 Coder Next",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-next-80b-a3b-instruct",
+        "Name": "Qwen: Qwen3 Next 80B A3B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-vl-235b-a22b-instruct",
+        "Name": "Qwen: Qwen3 VL 235B A22B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-vl-30b-a3b-instruct",
+        "Name": "Qwen: Qwen3 VL 30B A3B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-vl-30b-a3b-thinking",
+        "Name": "Qwen: Qwen3 VL 30B A3B Thinking",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3-vl-8b-instruct",
+        "Name": "Qwen: Qwen3 VL 8B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-397b-a17b",
+        "Name": "Qwen: Qwen3.5 397B A17B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-plus-02-15",
+        "Name": "Qwen: Qwen3.5 Plus 2026-02-15",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-plus-20260420",
+        "Name": "Qwen: Qwen3.5 Plus 2026-04-20",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-122b-a10b",
+        "Name": "Qwen: Qwen3.5-122B-A10B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-27b",
+        "Name": "Qwen: Qwen3.5-27B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-35b-a3b",
+        "Name": "Qwen: Qwen3.5-35B-A3B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-9b",
+        "Name": "Qwen: Qwen3.5-9B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-flash-02-23",
+        "Name": "Qwen: Qwen3.5-Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.6-27b",
+        "Name": "Qwen: Qwen3.6 27B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.6-35b-a3b",
+        "Name": "Qwen: Qwen3.6 35B A3B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.6-flash",
+        "Name": "Qwen: Qwen3.6 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.6-plus",
+        "Name": "Qwen: Qwen3.6 Plus",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.7-flash",
+        "Name": "Qwen: Qwen3.7 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.7-plus",
+        "Name": "Qwen: Qwen3.7 Plus",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-2.4t-a95b",
+        "Name": "Qwen: Qwen3.8 2.4T A95B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-27b",
+        "Name": "Qwen: Qwen3.8 27B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-flash",
+        "Name": "Qwen: Qwen3.8 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "rekaai/reka-edge",
+        "Name": "Reka Edge",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "rekaai/reka-flash-3",
+        "Name": "Reka Flash 3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "relace/relace-apply-3",
+        "Name": "Relace: Relace Apply 3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "relace/relace-search",
+        "Name": "Relace: Relace Search",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "undi95/remm-slerp-l2-13b",
+        "Name": "ReMM SLERP 13B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "sakana/fugu-ultra",
+        "Name": "Sakana: Fugu Ultra",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "sakana/sakana-namazu",
+        "Name": "Sakana: Sakana Namazu",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "sao10k/l3-lunaris-8b",
+        "Name": "Sao10K: Llama 3 8B Lunaris",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "sao10k/l3.1-euryale-70b",
+        "Name": "Sao10K: Llama 3.1 Euryale 70B v2.2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.20",
+        "Name": "SpaceXAI: Grok 4.20",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.20-multi-agent",
+        "Name": "SpaceXAI: Grok 4.20 Multi-Agent",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.3",
+        "Name": "SpaceXAI: Grok 4.3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.3:batch",
+        "Name": "SpaceXAI: Grok 4.3 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.5",
+        "Name": "SpaceXAI: Grok 4.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.6",
+        "Name": "SpaceXAI: Grok 4.6",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-build-0.1",
+        "Name": "SpaceXAI: Grok Build 0.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "stepfun/step-3.5-flash",
+        "Name": "StepFun: Step 3.5 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "stepfun/step-3.7-flash",
+        "Name": "StepFun: Step 3.7 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hunyuan-a13b-instruct",
+        "Name": "Tencent: Hunyuan A13B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hy-mt2-1.8b",
+        "Name": "Tencent: Hy-MT2-1.8B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hy-mt2-30b-a3b",
+        "Name": "Tencent: Hy-MT2-30B-A3B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hy-mt2-7b",
+        "Name": "Tencent: Hy-MT2-7B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hy3",
+        "Name": "Tencent: Hy3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hy3-preview",
+        "Name": "Tencent: Hy3 preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "tencent/hy4-preview",
+        "Name": "Tencent: Hy4 preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "thedrummer/cydonia-24b-v4.1",
+        "Name": "TheDrummer: Cydonia 24B V4.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "thedrummer/skyfall-36b-v2",
+        "Name": "TheDrummer: Skyfall 36B V2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "thedrummer/unslopnemo-12b",
+        "Name": "TheDrummer: UnslopNemo 12B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "thinkingmachines/inkling",
+        "Name": "Thinking Machines: Inkling",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "thinkingmachines/inkling-small",
+        "Name": "Thinking Machines: Inkling Small",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "upstage/solar-pro-3",
+        "Name": "Upstage: Solar Pro 3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "upstage/solar-pro4",
+        "Name": "Upstage: Solar Pro 4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+        "Name": "Venice: Uncensored",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "writer/palmyra-x5",
+        "Name": "Writer: Palmyra X5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~x-ai/grok-latest",
+        "Name": "xAI: Grok Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.5",
+        "Name": "Z.ai: GLM 4.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.5-air",
+        "Name": "Z.ai: GLM 4.5 Air",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.5v",
+        "Name": "Z.ai: GLM 4.5V",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.6",
+        "Name": "Z.ai: GLM 4.6",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.6v",
+        "Name": "Z.ai: GLM 4.6V",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.7",
+        "Name": "Z.ai: GLM 4.7",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-4.7-flash",
+        "Name": "Z.ai: GLM 4.7 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5",
+        "Name": "Z.ai: GLM 5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5-turbo",
+        "Name": "Z.ai: GLM 5 Turbo",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.1",
+        "Name": "Z.ai: GLM 5.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.3-flash",
+        "Name": "Z.ai: GLM 5.3 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.3-flash:batch",
+        "Name": "Z.ai: GLM 5.3 Flash (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5v-turbo",
+        "Name": "Z.ai: GLM 5V Turbo",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~z-ai/glm-flash-latest",
+        "Name": "Z.ai: GLM Flash Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~z-ai/glm-latest",
+        "Name": "Z.ai: GLM Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-astra",
+        "Name": "OpenAI: GPT-6 Astra",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "openai/gpt-6-astra-pro",
+        "Name": "OpenAI: GPT-6 Astra Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "openai/gpt-6-astra:batch",
+        "Name": "OpenAI: GPT-6 Astra (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": true
+      },
+      {
+        "Slug": "openai/gpt-6-astra-pro:batch",
+        "Name": "OpenAI: GPT-6 Astra Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-max-0902",
+        "Name": "Qwen: Qwen3.8 Max (0902)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inception/mercury-2.5",
+        "Name": "Inception: Mercury 2.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.3:batch",
+        "Name": "Z.ai: GLM 5.3 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~deepseek/deepseek-flash-latest",
+        "Name": "DeepSeek: DeepSeek Flash Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~deepseek/deepseek-pro-latest",
+        "Name": "DeepSeek: DeepSeek Pro Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4.1-flash",
+        "Name": "DeepSeek: DeepSeek V4.1 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inclusionai/ling-3.0-flash-vl",
+        "Name": "inclusionAI: Ling 3.0 Flash VL",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inference-net/schematron-v2-small",
+        "Name": "Inference.net: Schematron V2 Small",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inference-net/schematron-v2-turbo",
+        "Name": "Inference.net: Schematron V2 Turbo",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nex-agi/nex-n2.5-mini",
+        "Name": "Nex AGI: Nex-N2.5-Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nex-agi/nex-n2.5-pro",
+        "Name": "Nex AGI: Nex-N2.5-Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~openai/gpt-astra-latest",
+        "Name": "OpenAI: GPT Astra Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~openai/gpt-luna-latest",
+        "Name": "OpenAI: GPT Luna Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~openai/gpt-sol-latest",
+        "Name": "OpenAI: GPT Sol Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~openai/gpt-terra-latest",
+        "Name": "OpenAI: GPT Terra Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "prism-ml/ternary-bonsai-2-27b",
+        "Name": "PrismML: Ternary Bonsai 2 27B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "sakana/fugu-max",
+        "Name": "Sakana: Fugu Max",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "sakana/fugu-ultra-v2",
+        "Name": "Sakana: Fugu Ultra v2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "x-ai/grok-4.7",
+        "Name": "SpaceXAI: Grok 4.7",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "xiaomi/mimo-v2.6-flash",
+        "Name": "Xiaomi: MiMo-V2.6-Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "xiaomi/mimo-v2.6-pro",
+        "Name": "Xiaomi: MiMo-V2.6-Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "xiaomi/mimo-v2.6-pro-ultraspeed",
+        "Name": "Xiaomi: MiMo-V2.6-Pro-UltraSpeed",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.3-flashx",
+        "Name": "Z.ai: GLM 5.3 FlashX",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-5.5",
+        "Name": "Anthropic: Claude Opus 5.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-opus-5.5:batch",
+        "Name": "Anthropic: Claude Opus 5.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "cohere/command-a-plus",
+        "Name": "Cohere: Command A+",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4.1-flash:batch",
+        "Name": "DeepSeek: DeepSeek V4.1 Flash (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k3:batch",
+        "Name": "MoonshotAI: Kimi K3 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-luna",
+        "Name": "OpenAI: GPT-6 Luna",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-luna:batch",
+        "Name": "OpenAI: GPT-6 Luna (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-luna-pro",
+        "Name": "OpenAI: GPT-6 Luna Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-luna-pro:batch",
+        "Name": "OpenAI: GPT-6 Luna Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-sol",
+        "Name": "OpenAI: GPT-6 Sol",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-sol:batch",
+        "Name": "OpenAI: GPT-6 Sol (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-sol-pro",
+        "Name": "OpenAI: GPT-6 Sol Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6-sol-pro:batch",
+        "Name": "OpenAI: GPT-6 Sol Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-20b:batch",
+        "Name": "OpenAI: gpt-oss-20b (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-omni-flash",
+        "Name": "Qwen: Qwen3.8 Omni Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "aion-labs/aion-3.5",
+        "Name": "AionLabs: Aion 3.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "aion-labs/aion-3.5-mini",
+        "Name": "AionLabs: Aion 3.5 Mini",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-haiku-5.5",
+        "Name": "Anthropic: Claude Haiku 5.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-haiku-5.5:batch",
+        "Name": "Anthropic: Claude Haiku 5.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-5.5",
+        "Name": "Anthropic: Claude Sonnet 5.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "anthropic/claude-sonnet-5.5:batch",
+        "Name": "Anthropic: Claude Sonnet 5.5 (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "deepseek/deepseek-v4.1-flash-1017",
+        "Name": "DeepSeek: DeepSeek V4.1 Flash 1017",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "elorian/glimpse",
+        "Name": "Elorian: Glimpse",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "fireworks/ember-1",
+        "Name": "Fireworks: Ember-1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-4-argon",
+        "Name": "Google: Gemini 4 Argon",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-4-argon:batch",
+        "Name": "Google: Gemini 4 Argon (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemini-nano-banana-2.1",
+        "Name": "Google: Nano Banana 2.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inception/mercury-3",
+        "Name": "Inception: Mercury 3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "inclusionai/ling-3.1-flash",
+        "Name": "inclusionAI: Ling 3.1 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "liquid/lfm-2.5-2.6b",
+        "Name": "LiquidAI: LFM2.5-2.6B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "liquid/lfm-2.5-24b-a2b",
+        "Name": "LiquidAI: LFM2.5-24B-A2B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-spark-open",
+        "Name": "Meta: Muse Spark Open",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/muse-wonder",
+        "Name": "Meta: Muse Wonder",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimax/minimax-m3.1-flash",
+        "Name": "MiniMax: MiniMax M3.1 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-large-2512",
+        "Name": "Mistral: Mistral Large 3 2512",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-large-4-0",
+        "Name": "Mistral: Mistral Large 4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moondream/moondream3-preview",
+        "Name": "Moondream: Moondream 3 Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moondream/moondream3.1-9b-a2b",
+        "Name": "Moondream: Moondream 3.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "moonshotai/kimi-k3.1-pro",
+        "Name": "MoonshotAI: Kimi K3.1 Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3.5-super-vl",
+        "Name": "NVIDIA: Nemotron 3.5 Super VL",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/switchyard",
+        "Name": "NVIDIA: Switchyard",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-sol",
+        "Name": "OpenAI: GPT-6.1 Sol",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-sol:batch",
+        "Name": "OpenAI: GPT-6.1 Sol (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-sol-pro",
+        "Name": "OpenAI: GPT-6.1 Sol Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-sol-pro:batch",
+        "Name": "OpenAI: GPT-6.1 Sol Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-120b:batch",
+        "Name": "OpenAI: gpt-oss-120b (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "unbiased/pareto-26.10",
+        "Name": "Pareto 26.10",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "unbiased/pareto-26.9",
+        "Name": "Pareto 26.9",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "~unbiased/pareto-latest",
+        "Name": "Pareto Latest",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "perceptron/perceptron-mk1.5",
+        "Name": "Perceptron: Perceptron Mk1.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.7-plus:batch",
+        "Name": "Qwen: Qwen3.7 Plus (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-max-prime",
+        "Name": "Qwen: Qwen3.8 Max Prime",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "reflection/beam-1.0-501b-a23b",
+        "Name": "Reflection: Beam 1.0 501B A23B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "scaledown/extract",
+        "Name": "ScaleDown: Extract",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "scaledown/summarize",
+        "Name": "ScaleDown: Summarize",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "stepfun/step-5-preview",
+        "Name": "StepFun: Step 5 Preview",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "typesafe/jev-router",
+        "Name": "TypeSafe: Jev Router",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "upstage/solar-mini4",
+        "Name": "Upstage: Solar Mini 4",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "z-ai/glm-5.3-prime",
+        "Name": "Z.ai: GLM 5.3 Prime",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-terra",
+        "Name": "OpenAI: GPT-6.1 Terra",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-terra:batch",
+        "Name": "OpenAI: GPT-6.1 Terra (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-terra-pro",
+        "Name": "OpenAI: GPT-6.1 Terra Pro",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-6.1-terra-pro:batch",
+        "Name": "OpenAI: GPT-6.1 Terra Pro (batch)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "particle-ai/particle-1",
+        "Name": "Particle AI: Particle-1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "prism-ml/ternary-bonsai-2-9b",
+        "Name": "PrismML: Ternary Bonsai 2 9B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      }
+    ],
+    "nvidia": [
+      {
+        "Slug": "z-ai/glm-5.2",
+        "Name": "GLM 5.2 (1M)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "thinkingmachines/inkling",
+        "Name": "Inkling (1M)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "minimaxai/minimax-m3",
+        "Name": "MiniMax M3 (1M)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "poolside/laguna-xs-2.1",
+        "Name": "Poolside Laguna XS 2.1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "stepfun-ai/step-3.7-flash",
+        "Name": "Step 3.7 Flash",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-medium-3.5-128b",
+        "Name": "Mistral Medium 3.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-4-31b-it",
+        "Name": "Gemma 4 31B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-120b",
+        "Name": "GPT-OSS 120B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-20b",
+        "Name": "GPT-OSS 20B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+        "Name": "Nemotron 3 Nano Omni Reasoning",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-3-nano-30b-a3b",
+        "Name": "Nemotron 3 Nano 30B A3B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+        "Name": "Llama 3.1 Nemotron Ultra 253B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+        "Name": "Llama 3.3 Nemotron Super 49B v1.5",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/llama-3.3-nemotron-super-49b-v1",
+        "Name": "Llama 3.3 Nemotron Super 49B v1",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nvidia-nemotron-nano-9b-v2",
+        "Name": "Nemotron Nano 9B v2",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-nano-12b-v2-vl",
+        "Name": "Nemotron Nano 12B v2 VL",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+        "Name": "Llama 3.1 Nemotron Nano 8B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+        "Name": "Llama 3.1 Nemotron Nano VL 8B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/cosmos-reason2-8b",
+        "Name": "Cosmos Reason2 8B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/llama-3.1-nemotron-70b-instruct",
+        "Name": "Llama 3.1 Nemotron 70B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "nvidia/nemotron-mini-4b-instruct",
+        "Name": "Nemotron Mini 4B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-nemotron",
+        "Name": "Mistral Nemotron",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/mistral-7b-instruct-v0.3",
+        "Name": "Mistral 7B Instruct v0.3",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/llama-3.3-70b-instruct",
+        "Name": "Llama 3.3 70B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/llama-3.1-70b-instruct",
+        "Name": "Llama 3.1 70B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/llama-3.2-90b-vision-instruct",
+        "Name": "Llama 3.2 90B Vision",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/llama-3.2-11b-vision-instruct",
+        "Name": "Llama 3.2 11B Vision",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/llama-3.1-8b-instruct",
+        "Name": "Llama 3.1 8B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "meta/llama-3.2-1b-instruct",
+        "Name": "Llama 3.2 1B Instruct",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-3-12b-it",
+        "Name": "Gemma 3 12B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-3-4b-it",
+        "Name": "Gemma 3 4B",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      }
+    ],
+    "lmstudio": [
+      {
+        "Slug": "qwen3.8-27b@iq3_xxs",
+        "Name": "Qwen3.8 27B UD - unsloth (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.8-27b",
+        "Name": "Qwen3.8 27B - qwen (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen3.8-27b@iq1_m",
+        "Name": "Qwen3.8 27B UD - unsloth (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "google/gemma-4-e4b",
+        "Name": "Gemma 4 E4B - google (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "qwen/qwen3.5-9b",
+        "Name": "Qwen3.5 9B - qwen (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "medgemma-1.5-4b-it",
+        "Name": "Medgemma 1.5 4B Instruct - mradermacher (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "mistralai/ministral-3-14b-reasoning",
+        "Name": "Ministral 3 14B Reasoning - mistralai (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      },
+      {
+        "Slug": "openai/gpt-oss-20b",
+        "Name": "GPT-OSS 20B - openai (lokal)",
+        "EigenerName": false,
+        "Eigen": false,
+        "Ausgeblendet": false
+      }
+    ]
+  },
+  "Entfernt": {
+    "entropic": [
+      "claude-opus-5",
+      "claude-opus-5[1m]",
+      "claude-fable-5[1m]",
+      "claude-sonnet-5[1m]",
+      "claude-opus-4-8[1m]",
+      "claude-fable-5-1[1m]",
+      "claude-haiku-4-5",
+      "claude-opus-4-7",
+      "claude-opus-4-6",
+      "claude-sonnet-4-6",
+      "claude-opus-4-5",
+      "claude-sonnet-4-5"
+    ],
+    "openai": [],
+    "google": [],
+    "moonshot": [],
+    "opencode-zen-free": [],
+    "openrouter-free": [],
+    "openrouter": [],
+    "nvidia": [],
+    "lmstudio": []
+  }
+}

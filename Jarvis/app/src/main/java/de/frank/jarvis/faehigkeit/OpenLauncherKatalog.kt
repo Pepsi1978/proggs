@@ -30,7 +30,7 @@ object OpenLauncherKatalog {
     }
 
     /** Ein Anbieterbereich der Modellliste von OpenLauncher (eine Gruppe aus models.json), nur sichtbare Modelle. */
-    data class Gruppe(val id: String, val titel: String, val anbieter: String, val modelle: List<Modell>)
+    data class Gruppe(val id: String, val titel: String, val anbieter: String, val modelle: List<Modell>, val position: Int = -1)
 
     /** Das geladene Angebot: Gruppen und die am PC abweichend gemerkten Effort-Stufen (effort-stufen.json). */
     class Angebot(val gruppen: List<Gruppe>, val gemerkt: Map<String, List<String>>) {
@@ -62,7 +62,10 @@ object OpenLauncherKatalog {
     }
 
     /** Die Gruppen in Franks Reihenfolge: Anthropic, OpenAI, Moonshot, Google, danach die übrigen wie im OpenLauncher. */
-    fun sortiert(gruppen: List<Gruppe>) = gruppen.sortedBy { g -> VORRANG.indexOf(g.anbieter.lowercase(Locale.ROOT)).let { if (it < 0) VORRANG.size else it } }
+    fun sortiert(gruppen: List<Gruppe>) =
+        // Mit gemeinsamer Anordnung (OpenLauncher/model-layout.json) genau die Gruppenfolge der Seitenleiste von OpenLauncher.
+        if (gruppen.isNotEmpty() && gruppen.all { it.position >= 0 }) gruppen.sortedBy { it.position }
+        else gruppen.sortedBy { g -> VORRANG.indexOf(g.anbieter.lowercase(Locale.ROOT)).let { if (it < 0) VORRANG.size else it } }
     fun anfangsOffen(g: Gruppe) = g.anbieter.lowercase(Locale.ROOT) in VORRANG
 
     data class Wahl(val modell: Modell, val effort: String, val profil: String, val modus: String, val cli: String) {
@@ -131,7 +134,9 @@ object OpenLauncherKatalog {
             }
         }
         val (neueGruppen, neueStufen) = kotlinx.coroutines.coroutineScope {
-            val g = async { runCatching { gruppenAus(lies("OpenLauncher/models.json")) } }
+            val anordnung = async { runCatching { lies("OpenLauncher/model-layout.json") }.getOrNull() }
+            val modelle = async { runCatching { lies("OpenLauncher/models.json") } }
+            val g = async { modelle.await().mapCatching { gruppenAus(it, anordnung.await()) } }
             val s = async { runCatching { stufenAus(lies("OpenLauncher/effort-stufen.json")) } }
             g.await() to s.await()
         }
@@ -147,24 +152,59 @@ object OpenLauncherKatalog {
     /** models.json (Gruppen mit Models); Profil, Modus und Effort sind Franks Standards, nicht model-defaults.json. */
     internal fun auslesen(modelsJson: String): List<Modell> = gruppenAus(modelsJson).flatMap { it.modelle }
 
-    internal fun gruppenAus(modelsJson: String): List<Gruppe> {
+    /**
+     * Gruppen aus models.json. Mit [anordnungJson] (OpenLauncher/model-layout.json, die gemeinsame Anordnung aller
+     * OpenLauncher-Rechner) gelten deren Gruppen- und Modellreihenfolge, Ausgeblendet, eigene Namen und eigene Modelle,
+     * genau wie in der Seitenleiste von OpenLauncher. Modelle, die die Anordnung nicht kennt, hängen hinten an.
+     */
+    internal fun gruppenAus(modelsJson: String, anordnungJson: String? = null): List<Gruppe> {
         val gruppen = JSONArray(modelsJson)
+        val anordnung = anordnungJson?.let { runCatching { JSONObject(it) }.getOrNull() }
+        fun <T> nachId(obj: JSONObject?, id: String, lies: JSONObject.(String) -> T?): T? =
+            obj?.keys()?.asSequence()?.firstOrNull { it.equals(id, true) }?.let { obj.lies(it) }
+        val gruppenFolge = anordnung?.optJSONArray("Gruppen")?.let { a -> (0 until a.length()).map { a.optString(it).lowercase(Locale.ROOT) } }.orEmpty()
         val liste = mutableListOf<Gruppe>()
         for (g in 0 until gruppen.length()) {
             val gruppe = gruppen.optJSONObject(g) ?: continue
             val modelle = gruppe.optJSONArray("Models") ?: continue
-            val sichtbar = LinkedHashMap<String, Modell>()
+            val id = gruppe.optString("Id").ifBlank { "gruppe$g" }
+            val gruppenAnbieter = gruppe.optString("ProviderId")
+            val gruppenAnbieterName = gruppe.optString("ProviderName").ifBlank { gruppenAnbieter }
+            val alle = LinkedHashMap<String, Pair<Modell, Boolean>>()
             for (i in 0 until modelle.length()) {
                 val m = modelle.optJSONObject(i) ?: continue
-                if (m.optBoolean("IsHidden")) continue
                 val anbieter = m.optString("ProviderId")
                 val slug = m.optString("Slug")
                 if (anbieter.isBlank() || slug.isBlank()) continue
                 // Doppelte Slugs oder Gruppen ließen das Raster der Auswahl abstürzen.
-                sichtbar.getOrPut(slug) { Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug }, m.optString("ProviderName").ifBlank { anbieter }) }
+                alle.getOrPut(slug.lowercase(Locale.ROOT)) {
+                    Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug }, m.optString("ProviderName").ifBlank { anbieter }) to m.optBoolean("IsHidden")
+                }
+            }
+            val eintraege = nachId(anordnung?.optJSONObject("Modelle"), id) { optJSONArray(it) }
+            val sichtbar = LinkedHashMap<String, Modell>()
+            if (eintraege == null) {
+                for ((schluessel, paar) in alle) if (!paar.second) sichtbar[schluessel] = paar.first
+            } else {
+                val entfernt = nachId(anordnung?.optJSONObject("Entfernt"), id) { optJSONArray(it) }
+                    ?.let { a -> (0 until a.length()).map { a.optString(it).lowercase(Locale.ROOT) } }.orEmpty().toSet()
+                val bekannt = mutableSetOf<String>()
+                for (i in 0 until eintraege.length()) {
+                    val e = eintraege.optJSONObject(i) ?: continue
+                    val slug = e.optString("Slug")
+                    val schluessel = slug.lowercase(Locale.ROOT)
+                    if (slug.isBlank() || !bekannt.add(schluessel)) continue
+                    val name = e.optString("Name")
+                    val modell = alle[schluessel]?.first
+                        ?: if (e.optBoolean("Eigen") && gruppenAnbieter.isNotBlank()) Modell(gruppenAnbieter, slug, name.ifBlank { slug }, gruppenAnbieterName) else null
+                    if (modell == null || e.optBoolean("Ausgeblendet")) continue
+                    sichtbar[schluessel] = if (e.optBoolean("EigenerName") && name.isNotBlank()) modell.copy(name = name) else modell
+                }
+                for ((schluessel, paar) in alle) if (schluessel !in bekannt && schluessel !in entfernt && !paar.second) sichtbar[schluessel] = paar.first
             }
             val erstes = sichtbar.values.firstOrNull() ?: continue
-            liste += Gruppe(gruppe.optString("Id").ifBlank { "gruppe$g" }, gruppe.optString("Title").ifBlank { erstes.anbieterName }, erstes.anbieter, sichtbar.values.toList())
+            liste += Gruppe(id, gruppe.optString("Title").ifBlank { erstes.anbieterName }, erstes.anbieter, sichtbar.values.toList(),
+                gruppenFolge.indexOf(id.lowercase(Locale.ROOT)))
         }
         return liste.distinctBy { it.id }
     }

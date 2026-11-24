@@ -507,6 +507,19 @@ public sealed partial class MainViewModel : ObservableObject
                 : $"Modelle teilweise aktualisiert: {string.Join(" · ", updated)}; nicht erreichbar: {string.Join(", ", failed)}.";
     }
 
+    /// <summary>Uebernimmt eine vom Repo geholte Anordnung (Gruppenreihenfolge, Ausgeblendet) in die Seitenleiste.</summary>
+    private void ApplyRegistryOrderToSidebar()
+    {
+        for (var index = 0; index < _registry.Groups.Count; index++)
+        {
+            var current = ModelGroups.IndexOf(_registry.Groups[index]);
+            if (current >= 0 && current != index) ModelGroups.Move(current, index);
+        }
+        RefreshHiddenModels();
+        if (SelectedModel is { IsHidden: true })
+            SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
+    }
+
     private void RefreshHiddenModels()
     {
         HiddenModels.Clear();
@@ -899,7 +912,7 @@ public sealed partial class MainViewModel : ObservableObject
         HiddenModels.Add(model);
         HasHiddenModels = true;
         group.RefreshHeaderText();
-        _registry.Save();
+        _registry.SaveUserChange();
 
         if (ReferenceEquals(SelectedModel, model))
         {
@@ -922,7 +935,7 @@ public sealed partial class MainViewModel : ObservableObject
         HiddenModels.Remove(model);
         HasHiddenModels = HiddenModels.Count > 0;
         group.RefreshHeaderText();
-        _registry.Save();
+        _registry.SaveUserChange();
         SelectedModel ??= model;
         StatusText = $"Modell '{model.DisplayName}' wieder eingeblendet.";
     }
@@ -1006,6 +1019,7 @@ public sealed partial class MainViewModel : ObservableObject
         // arbeitet die neue Sitzung mit dem veralteten Stand dieses Rechners. Scheitert es, wird trotzdem gestartet.
         var sync = await RepoSync.PullAsync();
         if (!sync.Ok) Logger.Instance.Warn("MainViewModel", "Start", $"Repo-Abgleich: {sync.Message}");
+        else if (_registry.ReloadLayoutIfChanged()) ApplyRegistryOrderToSidebar();
 
         try
         {
