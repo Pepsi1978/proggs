@@ -180,7 +180,7 @@ class Szene3DChoreografieTest {
     }
 
     @Test
-    fun phasenDeckenTagAbendKatzenpauseNachtUndMorgenAb() {
+    fun phasenDeckenTagAufgabenKatzenpauseNachtUndMorgenAb() {
         assertEquals(5, SZENE_3D_PHASEN.size)
         assertEquals(0, phaseFuerZeit(0.0f))
         assertEquals(0, phaseFuerZeit(14.2f))

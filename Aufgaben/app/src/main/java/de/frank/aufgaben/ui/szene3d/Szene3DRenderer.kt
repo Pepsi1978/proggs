@@ -19,7 +19,7 @@ internal const val SZENE_3D_STANDBILD = 14.2f
 /** Phasen-Bezeichnungen unterhalb der 3D-Szene, synchron zur Tages- und Nacht-Choreografie. */
 internal val SZENE_3D_PHASEN: List<Pair<Float, String>> = listOf(
     0.0f to "Tag",
-    18.0f to "Abend",
+    18.0f to "Aufgaben",
     24.2f to "Katzenpause",
     39.2f to "Nacht",
     47.2f to "Morgen",
