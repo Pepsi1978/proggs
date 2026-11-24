@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Mac hat kein Rückfrage-Vollbild (Antwort über programmier_antwort), Diktattext geht beim Verlassen schon ins gemeinsame Eingabefeld, Mikrofon-Wächter/Stummschaltung ist Android-spezifisch",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-24T11:30:43+01:00",
- "versuch": 1
+ "zeit": "2026-11-24T11:34:39+01:00"
 }
