@@ -906,6 +906,20 @@
       "ruecknahme": "In MODUL.md den Absatz ab '`order` und `onMove` müssen den Reihenfolge-' und im Almanach die Zeile ab '**Variante (Jarvis 1.8.935):**' entfernen.",
       "kosten": "keine (nur Bedarfsdateien)",
       "status": "aktiv"
+    },
+    {
+      "id": "M50",
+      "titel": "Handy-Tests in Jarvis über handy-use, keine blinden Tipp-Ketten",
+      "datum": "2026-11-24T11:46",
+      "beleg": "Sitzung b84998f9: Handytest per nacktem adb, Display-Fehler (Fold ohne -d), Tipps nach verschwundenem Vollbild öffneten ‚Gespräch löschen?‘ und tippten Text ins Feld, ca. 6 min Mehraufwand",
+      "ort": [
+        "OpenLauncher/Profiles/ClaudeCode/standard/skills/handy-use/SKILL.md"
+      ],
+      "messbar": false,
+      "pruefung": "Von Hand: In späteren Jarvis-Gerätetests wird handy-use geladen, und kein Logbuch- oder Bildbefund zeigt Fehltipps nach einem Ansichtswechsel.",
+      "ruecknahme": "In handy-use/SKILL.md den Punkt beginnend mit ‚Keine blinden Tipp-Ketten über einen Ansichtswechsel‘ entfernen.",
+      "kosten": "eine Zeile in einer Bedarfsdatei",
+      "status": "aktiv"
     }
   ]
 }

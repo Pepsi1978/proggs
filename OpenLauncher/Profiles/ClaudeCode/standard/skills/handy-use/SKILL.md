@@ -63,6 +63,7 @@ Eine einzelne Aktion liefert danach von selbst den neuen Baum. In `do` holst du 
 - **WebView leer:** `H wait 1500` und erneut, sonst `shot`.
 - **Handy nicht erreichbar:** Das Skript baut die WLAN-Verbindung selbst neu auf, auf dem Server über den Tunnel `10.8.0.7:5555`. Scheitert auch das, Grund melden: Handy neu gestartet oder WireGuard aus.
 - **Helfer startet nicht:** Rückfall von Hand mit `adb shell cmd input tap X Y` und `adb exec-out screencap -j -d <Display-ID>`, die ID aus `dumpsys SurfaceFlinger --display-id`.
+- **Keine blinden Tipp-Ketten über einen Ansichtswechsel:** Verschwindet ein Vollbild oder Dialog, trifft der nächste Tipp die Ansicht darunter (24.11.2026: Löschdialog einer Jarvis-Session statt Rückfrage). Je neue Ansicht erst `shot` oder `tree`, dann tippen; auch Gerätetests in Jarvis laufen über diesen Skill.
 - **Zweiter Rechner gleichzeitig:** Alle nutzen denselben Helfer. Laufen dessen Instrumented Tests (`connectedAndroidTest`) oder `uiautomator`, vorher `H stop`, denn es gibt nur eine UiAutomation-Verbindung.
 
 ## Jarvis
