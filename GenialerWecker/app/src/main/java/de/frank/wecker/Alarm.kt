@@ -128,7 +128,7 @@ data class Alarm(
         require(startDate.isBlank() || days.isEmpty()) { "Wähle entweder Wochentage oder einen Datumsplan." }
         if (startDate.isNotBlank()) LocalDate.parse(startDate)
         require(sunMode.isBlank() || SonnenWecker.Ereignis.von(sunMode) != null) { "Unbekannter Sonnenzeitpunkt." }
-        require(sunOffsetMinutes in SonnenWecker.VERSATZ_MIN..SonnenWecker.VERSATZ_MAX) { "Der Versatz zur Sonne muss zwischen −60 und +90 Minuten liegen." }
+        require(sunOffsetMinutes in SonnenWecker.VERSATZ_MIN..SonnenWecker.VERSATZ_MAX) { "Der Versatz zur Sonne muss zwischen −90 und +90 Minuten liegen." }
         require(Schlaf.valid(sleepMinutes)) { "Die Schlafdauer muss zwischen 30 Minuten und 24 Stunden liegen." }
         require(volume in 1..100) { "Die Wecklautstärke muss größer als null sein." }
         require(speechRate == null || speechRate in .5f..2f) { "Das Sprechtempo muss zwischen 0,5× und 2× liegen." }

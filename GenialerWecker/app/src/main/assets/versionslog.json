@@ -44,6 +44,7 @@
     {"versionCode": 129, "versionName": "1.1.134", "stand": "11.11.2026, 17:56 Uhr", "notiz": "Die Jarvis-Brücke prüft den Signierschlüssel jetzt selbst, damit sie nach dem Deinstallieren einer anderen App nicht mehr den Zugriff verweigert."},
     {"versionCode": 130, "versionName": "1.1.135", "stand": "11.11.2026, 18:11 Uhr", "notiz": "Kommentare zur Brücken-Signaturprüfung korrigiert."},
     {"versionCode": 131, "versionName": "1.1.136", "stand": "18.11.2026, 08:45 Uhr", "notiz": "Die OpenAI-Modellwahl bietet jetzt die neuen Modelle GPT-6.2 Sol und GPT-6.2 Astra statt GPT-6.1 Sol und GPT-6 Astra; gespeicherte Auswahlen wechseln automatisch mit."},
-    {"versionCode": 132, "versionName": "1.1.137", "stand": "19.11.2026, 10:00 Uhr", "notiz": "Ein klingelnder Wecker erscheint jetzt auch bei entsperrtem Handy als Vollbild statt als schwebende Meldung, kommt nach Home zurück und zeigt seinen Text kurz unter dem Namen."}
+    {"versionCode": 132, "versionName": "1.1.137", "stand": "19.11.2026, 10:00 Uhr", "notiz": "Ein klingelnder Wecker erscheint jetzt auch bei entsperrtem Handy als Vollbild statt als schwebende Meldung, kommt nach Home zurück und zeigt seinen Text kurz unter dem Namen."},
+    {"versionCode": 133, "versionName": "1.1.138", "stand": "24.11.2026, 11:08 Uhr", "notiz": "Das Fenster für einen neuen Wecker zeigt den Namen ganz oben, den Sonnenaufgangswecker mit kompakter Zeitpunkt-Schaltfläche, einer Zeitleiste von früher bis später und den nächsten Weckzeiten untereinander."}
 ]
 }

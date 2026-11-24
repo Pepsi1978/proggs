@@ -234,6 +234,7 @@ fun Eingabefeld(
     sichtWandlung: VisualTransformation = VisualTransformation.None,
     tastaturOptionen: KeyboardOptions = KeyboardOptions.Default,
     tastaturAktionen: KeyboardActions = KeyboardActions.Default,
+    beschriftungFett: Boolean = false,
 ) {
     val gold = LocalGold.current
     val material = LocalMaterial.current
@@ -248,8 +249,10 @@ fun Eingabefeld(
         Text(
             beschriftung,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = if (istFehler) de.frank.genialeideen.ui.theme.LocalSemantisch.current.fehler else gold.textGedaempft,
+            style = if (beschriftungFett) MaterialTheme.typography.titleSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                else MaterialTheme.typography.labelMedium,
+            color = if (istFehler) de.frank.genialeideen.ui.theme.LocalSemantisch.current.fehler
+                else if (beschriftungFett) gold.textPrimaer else gold.textGedaempft,
         )
         OutlinedTextField(
             value = wert,

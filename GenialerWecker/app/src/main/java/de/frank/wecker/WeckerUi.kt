@@ -1979,6 +1979,8 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(), bottom = 16.dp).navigationBarsPadding()) {
       DesignBlatt {
        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Der Name steht immer ganz oben, auch wenn der Abschnitt darunter zugeklappt ist; nur die Beschriftung ist fett.
+        Eingabefeld(alarm.name, { vm.change(alarm.copy(name = it)) }, "Name des Weckers", Modifier.fillMaxWidth(), beschriftungFett = true)
         // Derived from this draft only, so it disappears once corrected and never carries over to another draft.
         val minute = rememberNow(60_000)
         OffenesDiktatKarte(vm, alarm)
@@ -1994,6 +1996,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         Section("Deine Weckzeit", collapsible = true, initiallyExpanded = true,
             summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null }, scheduleLabel(alarm),
                 if (alarm.sleepMinutes > 0) "Schlafdauer ${Schlaf.dauer(alarm.sleepMinutes)}" else null).joinToString(" · ")) {
+            Text("Weckzeit", style = MaterialTheme.typography.labelLarge, color = LocalGold.current.textGedaempft)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Früher öffnete hier der Plattformdialog `android.app.TimePickerDialog`. Der zieht sein
                 // Aussehen aus `styles.xml` (Theme.Material.Light) und erschien deshalb in jedem Design
@@ -2018,7 +2021,6 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 GoldKnopf(if (alarm.sunMode.isBlank()) "Uhrzeit ändern" else "Feste Uhrzeit", pickTime)
             }
             SonnenWahl(alarm, vm::change)
-            Eingabefeld(alarm.name, { vm.change(alarm.copy(name = it)) }, "Name des Weckers", Modifier.fillMaxWidth())
             SchlafdauerEingabe(alarm, vm::change)
             // Die Wiederholung gehört zur Weckzeit — hier sieht man sofort, dass der Wecker auch täglich klingeln kann.
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
@@ -3317,51 +3319,93 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
     if (sleep > 0) SchlafErinnerungProWecker(alarm, change)
 }
 
+/** Anzeigename eines Sonnenzeitpunkts im Editor; die Wecklogik und ihre Bezeichnungen bleiben unberührt. */
+private fun sonnenTitel(e: SonnenWecker.Ereignis): String = when (e) {
+    SonnenWecker.Ereignis.DAEMMERUNG -> "Beginn der Morgendämmerung"
+    SonnenWecker.Ereignis.AUFGANG -> "Sonnenaufgang (Empfehlung)"
+    SonnenWecker.Ereignis.TAGHELL -> "Heller Morgen"
+}
+
+private fun versatzKurz(v: Int): String = when {
+    v == 0 -> "genau"
+    v < 0 -> "${-v} Min. früher"
+    else -> "$v Min. später"
+}
+
 /**
- * Wecken nach der Sonne: Schalter, Sonnenzeitpunkt mit Erklärung, Versatz und Vorschau der nächsten Tage.
- * Die Weckzeit passt sich damit täglich an; feste Uhrzeit, Wiederholung und Ablauf bleiben wie gewählt.
+ * Sonnenaufgangswecker: Schalter, Wahl des Sonnenzeitpunkts in einem deckenden Fenster, Zeitleiste zur
+ * Feinabstimmung und die nächsten berechneten Weckzeiten. Die Berechnung selbst bleibt in [SonnenWecker].
  */
 @Composable
 private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
-    Toggle("Nach der Sonne wecken (täglich angepasst)", alarm.sunMode.isNotBlank()) { an ->
-        if (an) change(alarm.copy(sunMode = SonnenWecker.STANDARD.id))
-        // Beim Ausschalten bleibt die zuletzt berechnete Sonnen-Uhrzeit als feste Weckzeit stehen, statt still auf die alte zu springen.
-        else { val m = alarm.sonnenMinute() ?: (alarm.hour * 60 + alarm.minute)
-            change(alarm.copy(sunMode = "", sunOffsetMinutes = 0, hour = m / 60, minute = m % 60)) }
+    val gold = LocalGold.current
+    val an = alarm.sunMode.isNotBlank()
+    // Schalter direkt rechts neben der Beschriftung statt am Zeilenende.
+    Row(Modifier.heightIn(min = 48.dp).toggleable(an, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+        indication = null, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = { ein ->
+            // Ein neuer Sonnenaufgangswecker startet genau zum Zeitpunkt, ohne Abweichung.
+            if (ein) change(alarm.copy(sunMode = SonnenWecker.STANDARD.id, sunOffsetMinutes = 0))
+            // Beim Ausschalten bleibt die zuletzt berechnete Sonnen-Uhrzeit als feste Weckzeit stehen, statt still auf die alte zu springen.
+            else { val m = alarm.sonnenMinute() ?: (alarm.hour * 60 + alarm.minute)
+                change(alarm.copy(sunMode = "", sunOffsetMinutes = 0, hour = m / 60, minute = m % 60)) }
+        }), verticalAlignment = Alignment.CenterVertically) {
+        Text("Sonnenaufgangswecker"); Spacer(Modifier.width(16.dp)); Schalter3D(an, null)
     }
-    if (alarm.sunMode.isBlank()) return
+    if (!an) return
     val ereignis = SonnenWecker.Ereignis.von(alarm.sunMode) ?: SonnenWecker.STANDARD
-    Choice("Sonnenzeitpunkt", ereignis.id, SonnenWecker.Ereignis.entries.map {
-        it.id to (if (it == SonnenWecker.STANDARD) "${it.titel} · Empfehlung" else it.titel)
-    }) { change(alarm.copy(sunMode = it)) }
-    Text(ereignis.erklaerung, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer)
     var versatz by remember(alarm.id, alarm.sunOffsetMinutes) { mutableIntStateOf(alarm.sunOffsetMinutes) }
-    Text(when {
-        versatz == 0 -> "Genau zum Zeitpunkt"
-        versatz > 0 -> "$versatz Min. danach"
-        else -> "${-versatz} Min. davor"
-    }, style = MaterialTheme.typography.labelLarge, color = LocalGold.current.primaer)
+    var wahlOffen by rememberSaveable(alarm.id) { mutableStateOf(false) }
+    GoldKnopf("${sonnenTitel(ereignis)} · ${versatzKurz(versatz)}", { wahlOffen = true }, Modifier.fillMaxWidth())
+    if (wahlOffen) androidx.compose.ui.window.Dialog(onDismissRequest = { wahlOffen = false }) {
+        // Eigene, vollständig deckende Fläche ohne Überschrift: nur die drei Sonnenzeitpunkte.
+        LocalGestalt.current.Flaeche(Modifier.fillMaxWidth().background(gold.flaecheErhoeht, RoundedCornerShape(LocalDesignTokens.current.karteRadius)), erhoeht = true) {
+            Column(Modifier.fillMaxWidth().background(gold.flaecheErhoeht).padding(vertical = 8.dp)) {
+                SonnenWecker.Ereignis.entries.forEach { e ->
+                    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(e == ereignis, interactionSource = null, indication = null,
+                        role = androidx.compose.ui.semantics.Role.RadioButton) { change(alarm.copy(sunMode = e.id)); wahlOffen = false }
+                        .padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(e == ereignis, null); Text(sonnenTitel(e), Modifier.padding(start = 12.dp), color = gold.textPrimaer)
+                    }
+                }
+            }
+        }
+    }
+    fun setze(v: Int) { versatz = v.coerceIn(SonnenWecker.VERSATZ_MIN, SonnenWecker.VERSATZ_MAX); change(alarm.copy(sunOffsetMinutes = versatz)) }
+    // Ablesen und Feinabstimmung minutengenau: Die Zeitleiste rastet in 5-Minuten-Schritten, − und + verschieben um je eine Minute.
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton({ setze(versatz - 1) }, enabled = versatz > SonnenWecker.VERSATZ_MIN) { Icon(Icons.Default.Remove, "Eine Minute früher", tint = gold.primaer) }
+        Text(if (versatz == 0) "Manuell: Genau zum Zeitpunkt" else "Manuell: ${versatzKurz(versatz)}",
+            Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            style = MaterialTheme.typography.labelLarge, color = gold.primaer)
+        IconButton({ setze(versatz + 1) }, enabled = versatz < SonnenWecker.VERSATZ_MAX) { Icon(Icons.Default.Add, "Eine Minute später", tint = gold.primaer) }
+    }
     Regler3D(versatz.toFloat(), { versatz = (it / 5f).roundToInt() * 5 },
-        Modifier.semantics { contentDescription = "Versatz zum Sonnenzeitpunkt"; stateDescription = "$versatz Minuten" },
+        Modifier.semantics { contentDescription = "Abweichung zum Sonnenzeitpunkt"; stateDescription = if (versatz == 0) "genau zum Zeitpunkt" else versatzKurz(versatz) },
         bereich = SonnenWecker.VERSATZ_MIN.toFloat()..SonnenWecker.VERSATZ_MAX.toFloat(),
         stufen = (SonnenWecker.VERSATZ_MAX - SonnenWecker.VERSATZ_MIN) / 5 - 1,
         aufAenderungFertig = { change(alarm.copy(sunOffsetMinutes = versatz)) })
+    Row(Modifier.fillMaxWidth()) {
+        Text("Früher", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+        Text("Später", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+    }
     val context = LocalContext.current
     var ortStand by remember { mutableIntStateOf(0) }
-    val freigabe = rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
-        SonnenOrt.aktualisiere(context); SonnenOrt.neuPlanen(context); ortStand++
-    }
     LaunchedEffect(Unit) { SonnenOrt.aktualisiere(context); ortStand++ }
     val heute = remember(rememberNow(60_000) / 3_600_000) { java.time.LocalDate.now() }
     val vorschau = remember(alarm.sunMode, versatz, heute, ortStand) { SonnenWecker.vorschau(alarm.copy(sunOffsetMinutes = versatz), heute.plusDays(1)) }
-    Text("Nächste Tage: " + vorschau.joinToString(" · ") { (tag, uhr) ->
-        "${tag.format(DateTimeFormatter.ofPattern("EE dd.MM.", java.util.Locale.GERMAN))} $uhr" },
-        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer)
-    Text(remember(ortStand) { SonnenOrt.beschreibung(context) }, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-    if (!remember(ortStand) { SonnenOrt.erlaubt(context) })
-        StillerKnopf("Ungefähren Standort erlauben", { freigabe.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }, hervorgehoben = true)
-    Text("Wiederholung, Schlafdauer und Schlafenszeit-Erinnerung richten sich automatisch nach der jeweils berechneten Weckzeit.",
-        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        vorschau.forEach { (tag, uhr) ->
+            Row(Modifier.fillMaxWidth()) {
+                Text(tag.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.", java.util.Locale.GERMAN)), Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+                Text(uhr, style = MaterialTheme.typography.bodyMedium, fontFamily = zahlSchrift(), color = gold.primaer)
+            }
+        }
+    }
+    val zone = remember { ZoneId.systemDefault().let { it.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.GERMAN).ifBlank { it.id } } }
+    Text("Berechnet für deine Zeitzone: $zone", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+    Text("Wiederholung, Schlafdauer und Schlafzeiterinnerung richten sich automatisch nach der jeweils berechneten Weckzeit.",
+        style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
 }
 
 /**

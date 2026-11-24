@@ -17,7 +17,7 @@ import kotlin.math.sqrt
 object SonnenWecker {
 
     private const val TAG_MS = 86_400_000L
-    const val VERSATZ_MIN = -60
+    const val VERSATZ_MIN = -90
     const val VERSATZ_MAX = 90
 
     enum class Ereignis(val id: String, val titel: String, val hoehe: Double, val erklaerung: String) {
