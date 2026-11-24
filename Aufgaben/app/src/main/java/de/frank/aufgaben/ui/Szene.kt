@@ -2,6 +2,7 @@ package de.frank.aufgaben.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -65,8 +66,14 @@ fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") e
                 view.setOnPhaseChanged(null)
             },
         )
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp)) {
+            // Bei großer Systemschrift die Schrift so verkleinern, dass alle Phasen in eine Zeile passen.
+            val zeichen = SZENE_3D_PHASEN.sumOf { it.second.length }
+            val fontScale = LocalDensity.current.fontScale
+            val passendSp = maxWidth.value / ((zeichen * 0.64f + SZENE_3D_PHASEN.size * 2f) * fontScale)
+            val schrift = minOf(11.5f, passendSp).sp
         Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp),
+            Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             SZENE_3D_PHASEN.forEachIndexed { i, (_, name) ->
@@ -74,12 +81,13 @@ fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") e
                 Text(
                     name,
                     color = farbe,
-                    fontSize = 11.5.sp,
+                    fontSize = schrift,
                     maxLines = 1,
                     softWrap = false,
                     fontWeight = if (i == aktivePhase) FontWeight.Bold else FontWeight.Medium,
                 )
             }
+        }
         }
     }
 }

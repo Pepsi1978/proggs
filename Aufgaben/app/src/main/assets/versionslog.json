@@ -120,6 +120,7 @@
     {"versionCode": 116, "versionName": "1.0.115", "stand": "24.11.2026, 11:04 Uhr", "notiz": "3D-Szene: Mensch geht mittig durch die Tür ohne Wand- oder Rahmenkontakt des Arms, und die Katze springt beim Aufstehen sauber über den Korbrand ohne Pfotendurchdringung."},
     {"versionCode": 117, "versionName": "1.0.116", "stand": "24.11.2026, 11:09 Uhr", "notiz": "Zeitstrahl: Die nach links ausgewichene Uhrzeit ist jetzt wie in der Mitte rot gefüllt mit weißer Schrift statt nur rot umrandet."},
     {"versionCode": 118, "versionName": "1.0.117", "stand": "24.11.2026, 11:13 Uhr", "notiz": "Zeitstrahl: Beim Ziehen und vor „frei“-Marken weicht die Uhrzeit richtig aus, bei großer Systemschrift passt sie links in die Spalte und steht mit Abstand zum roten Punkt."},
-    {"versionCode": 119, "versionName": "1.0.118", "stand": "24.11.2026, 11:14 Uhr", "notiz": "Die Animation zeigt nach „Tag“ jetzt „Aufgaben“ statt „Abend“, während am Bildschirm die Aufgaben laufen."}
+    {"versionCode": 119, "versionName": "1.0.118", "stand": "24.11.2026, 11:14 Uhr", "notiz": "Die Animation zeigt nach „Tag“ jetzt „Aufgaben“ statt „Abend“, während am Bildschirm die Aufgaben laufen."},
+    {"versionCode": 120, "versionName": "1.0.119", "stand": "24.11.2026, 11:22 Uhr", "notiz": "Bei großer Systemschrift passen alle Bezeichnungen der Animation wieder vollständig in eine Zeile."}
 ]
 }

@@ -182,6 +182,7 @@ class Szene3DChoreografieTest {
     @Test
     fun phasenDeckenTagAufgabenKatzenpauseNachtUndMorgenAb() {
         assertEquals(5, SZENE_3D_PHASEN.size)
+        assertEquals(listOf("Tag", "Aufgaben", "Katzenpause", "Nacht", "Morgen"), SZENE_3D_PHASEN.map { it.second })
         assertEquals(0, phaseFuerZeit(0.0f))
         assertEquals(0, phaseFuerZeit(14.2f))
         assertEquals(1, phaseFuerZeit(20.0f))
