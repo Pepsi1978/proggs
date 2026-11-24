@@ -254,12 +254,15 @@ def _mac_tty() -> str:
 MAC_SKRIPT = '''on run argv
 tell application "Terminal"
  repeat with f in windows
-  repeat with t in tabs of f
-   if tty of t is (item 1 of argv) then
-    do script (item 2 of argv) in t
-    return "ok"
-   end if
-  end repeat
+  -- Fenster ohne lesbare Tabs (Einstellungen, Inspektor) brachen die ganze Suche mit -1728 ab (Vorfall N7RGY, 24.11.2026).
+  try
+   repeat with t in tabs of f
+    if tty of t is (item 1 of argv) then
+     do script (item 2 of argv) in t
+     return "ok"
+    end if
+   end repeat
+  end try
  end repeat
 end tell
 return "kein tab"

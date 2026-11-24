@@ -1397,6 +1397,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             daten.optJSONObject("frage")?.let { frageAusgang(daten.optString("auftrag_id"), it) }
             return
         }
+        if (daten.optString("stand") == "nachtrag_problem") {
+            // Der Warter am Rechner kann eingereihte Nachträge nicht in die Sitzung geben (ruht und lässt sich nicht wecken, oder
+            // beendet): klar sagen statt still „eingereiht“. Kommt einer später doch an, wechselt er auf empfangen (alsZugestellt).
+            val ids = daten.optJSONArray("nachtrag_ids")?.let { l -> (0 until l.length()).map { l.optString(it) }.toSet() } ?: return
+            val grund = daten.optString("schritt").take(400)
+            val neu = Auftragsbuch.setzeNachtraege(app, daten.optString("auftrag_id"), ids, setOf("angenommen", "fehler"), "nicht_zustellbar")
+            if (neu.isEmpty()) return
+            Auftragsbuch.finde(app, daten.optString("auftrag_id"))?.let { e ->
+                Auftragsbuch.nachtragGrund(app, e.optString("id"), neu.map { it.optString("id") }.toSet(), grund)
+                Logbuch.system("Nachtrag nicht zustellbar", "Auftrag ${e.optString("id")}: ${neu.joinToString { it.optString("id") }}: $grund")
+                statusZeile(e, "⚠️ Nachtrag ${neu.joinToString(", ") { it.optString("id") }} nicht zugestellt: $grund")
+            }
+            return
+        }
         if (daten.optBoolean("spaet")) {
             spaeteQuittung(auftragId, daten)
             return
@@ -1675,7 +1689,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Nachträge sind in der Sitzung angekommen: Stand zugestellt, die Sitzung arbeitet wieder, ein Satz ins Gespräch (je Nachtrag nur einmal). */
     private fun alsZugestellt(auftragId: String, ids: Set<String>, schritt: String) {
-        val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler"), "zugestellt")
+        val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler", "nicht_zustellbar"), "zugestellt")
         if (neu.isEmpty()) return
         val text = schritt.ifBlank {
             if (neu.all { istNachricht(it.optString("id")) }) "✓ Beim Programmierer angekommen."
@@ -2885,6 +2899,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
         @Synchronized
+        /** Hängt den Grund an Nachträge, die nicht zustellbar sind (für programmierauftraege). */
+        fun nachtragGrund(context: Context, id: String, ids: Set<String>, grund: String) {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return
+            val nachtraege = eintrag.optJSONArray("nachtraege") ?: return
+            (0 until nachtraege.length()).map { nachtraege.getJSONObject(it) }.filter { it.optString("id") in ids }.forEach { it.put("grund", grund) }
+            schreib(context, liste)
+        }
+
         fun setzeNachtraege(context: Context, id: String, ids: Set<String>?, von: Set<String>, nach: String): List<JSONObject> {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return emptyList()
@@ -2963,11 +2986,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     }
                     e.optJSONArray("nachtraege")?.takeIf { it.length() > 0 }?.let { l ->
                         append("\n  Nachträge: ").append((0 until l.length()).mapNotNull { l.optJSONObject(it) }.joinToString("; ") { n ->
-                            // Für Frank unterscheidbar: nur eingereiht, tatsächlich zugestellt oder nicht zustellbar.
+                            // Für Frank unterscheidbar: eingereiht, vom Programmierer empfangen, bearbeitet oder nicht zustellbar (mit Grund).
                             val stand = when (n.optString("stand")) {
-                                "angenommen" -> "eingereiht, noch nicht zugestellt"
+                                "angenommen" -> "eingereiht, vom Programmierer noch nicht empfangen"
+                                "zugestellt" -> "vom Programmierer empfangen, in Bearbeitung"
+                                "bearbeitet" -> "empfangen und bearbeitet"
                                 "fehler" -> "noch nicht beim Server, Jarvis schickt ihn nach"
-                                "nicht_zustellbar" -> "nicht zustellbar"
+                                "nicht_zustellbar" -> "nicht zustellbar" + n.optString("grund").takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
                                 else -> n.optString("stand")
                             }
                             n.optString("id") + " " + stand + " („" + n.optString("text").replace('\n', ' ').take(80) + "“)"

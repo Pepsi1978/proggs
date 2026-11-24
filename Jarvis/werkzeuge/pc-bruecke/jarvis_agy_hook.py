@@ -217,24 +217,38 @@ def agy_vorn(tty: str) -> bool:
                for z in aus.splitlines() if len(z.split(None, 1)) == 2)
 
 
-def wecke(tty: str) -> bool:
-    """Tippt den Weckruf in den Terminal-Tab der ruhenden Sitzung; „do script“ hängt das Enter selbst an."""
+def wecke(tty: str) -> str:
+    """Tippt den Weckruf in den Terminal-Tab der ruhenden Sitzung; „do script“ hängt das Enter selbst an. Leer = geweckt,
+    sonst der Grund, warum nicht (für das Protokoll und die Meldung an Jarvis)."""
     if not tty or not agy_vorn(tty):
         H.schreib(f"agy Warter: kein Terminal mit agy im Vordergrund ({tty or 'ohne tty'}), Nachtrag wartet auf die nächste Eingabe")
-        return False
+        return "im Terminal-Tab der Sitzung läuft Antigravity nicht mehr im Vordergrund"
     import jarvis_anhaenge
     try:
         r = subprocess.run(["osascript", "-e", jarvis_anhaenge.MAC_SKRIPT, tty, WECKRUF], capture_output=True, text=True, timeout=20)
         if r.stdout.strip() != "ok":
-            return False
+            # Früher still: Ein Fenster ohne Tabs ließ das Skript scheitern, und Nachträge blieben unbemerkt liegen (N7RGY).
+            H.schreib(f"agy Warter: Wecken gescheitert: {(r.stdout.strip() or '-')} {r.stderr.strip()[:200]}")
+            return "der Terminal-Tab der Sitzung ließ sich nicht ansteuern"
         # Wie bei Claude Code (jarvis_anhaenge._mac): Das angehängte Enter kann die TUI mit dem Text zusammen als Einfügen nehmen;
         # ein eigener leerer Aufruf ist das Enter. Kam das erste schon an, schickt ein leeres Enter in agy nichts ab.
         time.sleep(1)
         subprocess.run(["osascript", "-e", jarvis_anhaenge.MAC_SKRIPT, tty, ""], capture_output=True, text=True, timeout=20)
-        return True
+        return ""
     except Exception as fehler:
         H.schreib(f"agy Warter: Wecken {type(fehler).__name__}: {fehler}")
-        return False
+        return "das Wecken der Sitzung schlug fehl"
+
+
+def melde_problem(ids: list[str], grund: str) -> None:
+    """Sagt Jarvis klar, dass diese Nachträge (noch) nicht ankommen, statt sie still auf „eingereiht“ stehen zu lassen. Jarvis
+    zeigt sie dann als nicht zustellbar mit Grund; kommen sie später doch an, wechseln sie auf empfangen. Startet nie etwas neu."""
+    if not ids:
+        return
+    try:
+        H.melde("nachtrag_problem", grund, nachtrag_ids=ids)
+    except Exception as fehler:
+        H.schreib(f"agy Warter: Problem-Meldung {type(fehler).__name__}: {fehler}")
 
 
 def warter(agy: int, tty: str) -> int:
@@ -255,10 +269,16 @@ def warter(agy: int, tty: str) -> int:
     agy_start = h.startzeit(agy) or ""
     h.schreib(f"agy Warter gestartet (agy {agy}, {tty or 'ohne tty'})")
     weckversuch = 0.0
+    fehlversuche = 0
+    gemeldet: set[str] = set()
     try:
         while True:
             if not h.lebt(agy, agy_start):
                 h.schreib("agy Warter: Sitzung beendet")
+                offen = [n["nachtrag_id"] for n in offene_ids(lies_eingang())]
+                melde_problem([i for i in offen if i not in gemeldet],
+                              "Die Antigravity-Sitzung wurde beendet und ist nicht mehr fortsetzbar; der Nachtrag kam nicht an. "
+                              "Jarvis startet dafür keine neue Sitzung.")
                 return 0
             if lies_warter()[0] != os.getpid():
                 h.schreib("agy Warter: abgelöst")
@@ -292,13 +312,25 @@ def warter(agy: int, tty: str) -> int:
                     h.schreib(f"agy Warter: Nachquittung {fehler}")
             # Ruht die Sitzung (nach Stop, kein pre seitdem), weckt nur ein Tippen sie auf; pre gibt dann den Nachtrag.
             # Kurz warten: Kommt der Nachtrag genau zum Stop, setzt der Stop selbst fort und löscht „ruht“.
-            if offene_ids(lies_eingang()) and datei("ruht").exists() and time.monotonic() - weckversuch > 30:
+            # Nach drei gescheiterten Weckversuchen nur noch alle fünf Minuten (Frank ist dann schon informiert).
+            if offene_ids(lies_eingang()) and datei("ruht").exists() and time.monotonic() - weckversuch > (30 if fehlversuche < 3 else 300):
                 time.sleep(1.5)
                 if offene_ids(lies_eingang()) and datei("ruht").exists():
                     weckversuch = time.monotonic()
-                    if wecke(tty):
+                    grund = wecke(tty)
+                    if not grund:
+                        fehlversuche = 0
                         datei("ruht").unlink(missing_ok=True)
                         h.schreib("agy Warter: ruhende Sitzung geweckt")
+                    else:
+                        fehlversuche += 1
+                        if fehlversuche >= 3:
+                            offen = [n["nachtrag_id"] for n in offene_ids(lies_eingang()) if n["nachtrag_id"] not in gemeldet]
+                            if offen:
+                                gemeldet.update(offen)
+                                melde_problem(offen, f"Die Antigravity-Sitzung ruht, lässt sich aber nicht wecken: {grund}. Der Nachtrag "
+                                              "bleibt eingereiht und geht hinein, sobald im Terminal-Tab der Sitzung etwas eingegeben wird; "
+                                              "eine neue Sitzung startet Jarvis nicht.")
             if liste and not neu:
                 # Der Relay bietet sie bis zur Quittung weiter an: nicht im Kreis fragen.
                 time.sleep(3)
