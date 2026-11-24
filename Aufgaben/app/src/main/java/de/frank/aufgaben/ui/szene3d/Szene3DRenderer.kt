@@ -100,32 +100,33 @@ internal class Szene3DRenderer {
         hexLinear(0xD4B895),
     )
 
-    // Vorberechnete glatte Bezier-Laufpfade (mit sichtbar sehr großzügigem Abstand am Stuhl vorbei!)
-    // Stuhl offen bei (0.32, -0.14), Einstiegspunkt direkt vor der offenen Sitzfläche bei (0.62, +0.42)
+    // Vorberechnete glatte Bezier-Laufpfade:
+    // 1) Mensch geht zuerst gerade mittig durch die Türöffnung (z = -0.36, voller Abstand zu Wand & Zarge),
+    //    biegt erst IM Raum in den weiten Vordergrundbogen ein (Abstand zum Stuhl >= 0.63 m)!
     private val humanEnterPath = CubicPath2D(
-        -2.48f, -0.24f,
-        -1.05f, +0.56f,
-        +0.18f, +0.82f,
+        -2.65f, -0.36f,
+        -1.35f, -0.36f,
+        -0.05f, +0.96f,
         CHAIR_ENTRY_X, CHAIR_ENTRY_Z,
     )
     private val humanExitPath = CubicPath2D(
         CHAIR_ENTRY_X, CHAIR_ENTRY_Z,
-        +0.18f, +0.82f,
-        -1.05f, +0.56f,
-        -2.52f, -0.24f,
+        -0.05f, +0.96f,
+        -1.35f, -0.36f,
+        -2.65f, -0.36f,
     )
 
-    // Katzenpfade: 1) Tür -> Körbchen links oben, 2) Körbchen -> Mensch/Schreibtisch, 3) Rückweg zur Tür
-    private val catToBasketPath = CubicPath2D(
-        -2.62f, -0.28f,
-        -1.35f, +0.06f,
-        -0.82f, -0.55f,
-        CAT_BASKET_X, CAT_BASKET_Z,
+    // Katzenpfade: 1) Tür -> Absprungpunkt vor Körbchen links oben, 2) Landepunkt vor Körbchen -> Mensch/Schreibtisch, 3) Rückweg zur Tür
+    private val catToBasketApproachPath = CubicPath2D(
+        -2.62f, -0.30f,
+        -1.45f, -0.04f,
+        -0.96f, -0.34f,
+        CAT_BASKET_OUT_X, CAT_BASKET_OUT_Z,
     )
-    private val catBasketToHumanPath = CubicPath2D(
-        CAT_BASKET_X, CAT_BASKET_Z,
-        -0.52f, -0.45f,
-        -0.02f, +0.34f,
+    private val catBasketOutToHumanPath = CubicPath2D(
+        CAT_BASKET_OUT_X, CAT_BASKET_OUT_Z,
+        -0.36f, -0.22f,
+        +0.02f, +0.36f,
         CAT_LAUNCH_X, CAT_LAUNCH_Z,
     )
     private val catDeskToWaitPath = CubicPath2D(
@@ -258,9 +259,9 @@ internal class Szene3DRenderer {
             else -> 0.76f
         }
 
-        // Tür schwingt beim Ankommen (0.2..6.5s), beim Feierabend (35.4..40.55s, erst nach vollem Hinausgehen!) und bei Rückkehr (53.8..60.0s)
+        // Tür schwingt beim Ankommen (0.2..6.5s), beim Feierabend (35.4..40.8s, erst nach vollem Hinausgehen!) und bei Rückkehr (53.8..60.0s)
         val doorEnter1 = smootherPhase(t, 0.20f, 1.25f) * (1f - smootherPhase(t, 5.0f, 1.45f))
-        val doorExit = smootherPhase(t, 35.4f, 1.20f) * (1f - smootherPhase(t, 39.35f, 1.20f))
+        val doorExit = smootherPhase(t, 35.4f, 1.20f) * (1f - smootherPhase(t, 39.60f, 1.20f))
         val doorEnter2 = smootherPhase(t, 53.8f, 1.25f) * (1f - smootherPhase(t, 58.6f, 1.45f))
         curDoorAngle = max(max(doorEnter1, doorExit), doorEnter2) * 74f
 
@@ -839,35 +840,35 @@ internal class Szene3DRenderer {
             ms.rotateY(18f)
             // Geflochtener Korb-Boden (bündig mit der Korbwand)
             ms.scoped {
-                ms.translate(0f, 0.018f, 0f)
-                ms.scale(0.45f, 0.036f, 0.39f)
+                ms.translate(0f, 0.016f, 0f)
+                ms.scale(0.45f, 0.032f, 0.39f)
                 drawMesh(meshes.cylinder, p.korbWicker, rough = 0.84f, pattern = 13, alt = p.korbWickerAlt)
             }
-            // Geflochtene ovale Korbwand (sanft nach oben geöffnet, passend zu Boden & Rand)
+            // Geflochtene ovale Korbwand (gemütlich niedrig mit Randhöhe ~0.12 m, passend für klaren Katzensprung)
             ms.scoped {
-                ms.translate(0f, 0.062f, 0f)
+                ms.translate(0f, 0.052f, 0f)
                 ms.rotateX(180f)
-                ms.scale(0.54f, 0.112f, 0.47f)
+                ms.scale(0.54f, 0.092f, 0.47f)
                 drawMesh(meshes.catBasketWall, p.korbWicker, rough = 0.84f, pattern = 13, alt = p.korbWickerAlt)
             }
-            // Weich gerollter Flechtrand oben (Torus flach in XZ-Ebene)
+            // Weich gerollter Flechtrand oben (Oberkante bei y ≈ 0.121 m)
             ms.scoped {
-                ms.translate(0f, 0.114f, 0f)
+                ms.translate(0f, 0.096f, 0f)
                 ms.rotateX(90f)
-                ms.scale(0.68f, 0.60f, 0.28f)
+                ms.scale(0.68f, 0.60f, 0.23f)
                 drawMesh(meshes.torus, p.korbWicker, rough = 0.82f, pattern = 13, alt = p.korbWickerAlt)
             }
             // Kuscheliges, weiches Innenkissen
             ms.scoped {
-                ms.translate(0f, 0.044f, 0f)
-                ms.scale(0.42f, 0.088f, 0.36f)
+                ms.translate(0f, 0.040f, 0f)
+                ms.scale(0.42f, 0.078f, 0.36f)
                 drawMesh(meshes.sphere, p.korbKissen, rough = 0.90f, pattern = 6)
             }
-            // Kleiner farblich passender Zier-Kissenrand vorne links
+            // Kleiner farblich passender Zier-Kissenrand hinten links
             ms.scoped {
-                ms.translate(-0.10f, 0.068f, -0.07f)
+                ms.translate(-0.10f, 0.062f, -0.07f)
                 ms.rotateY(28f)
-                ms.scale(0.14f, 0.055f, 0.095f)
+                ms.scale(0.14f, 0.048f, 0.095f)
                 drawMesh(meshes.sphere, p.akzentHell, rough = 0.88f, pattern = 6)
             }
         }
@@ -1229,11 +1230,15 @@ internal class Szene3DRenderer {
             val pelvisRoll = -s * 2.8f
             val pelvisYaw = s * 6.5f
             // Gegenläufige Oberkörper-Rotation & natürlicher lockerer Armschwung (gleitet nahtlos in standPose über)
-            val torsoTwist = -s * 8.5f
-            val shL = -s * 24f + mix(3f, 2f, amp)
-            val shR = s * 24f + mix(3f, 2f, amp)
-            val elbL = 15f + max(0f, -s) * 18f + 3f * amp
-            val elbR = 15f + max(0f, s) * 18f + 3f * amp
+            // Im Bereich der Türöffnung (x < -1.75) liegen die Arme natürlich etwas näher am Körper (kein Wandkontakt)
+            val doorZone = smooth(phase(-wx, 1.65f, 0.45f))
+            val armSwingScale = mix(1.0f, 0.68f, doorZone)
+            val armOutDeg = mix(7.0f, 4.2f, doorZone)
+            val torsoTwist = -s * 8.5f * mix(1.0f, 0.72f, doorZone)
+            val shL = -s * 24f * armSwingScale + mix(3f, 2f, amp)
+            val shR = s * 24f * armSwingScale + mix(3f, 2f, amp)
+            val elbL = 15f + max(0f, -s) * 18f * armSwingScale + 3f * amp
+            val elbR = 15f + max(0f, s) * 18f * armSwingScale + 3f * amp
             return HumanPose(
                 x = wx, z = wz, yawDeg = yaw,
                 pelvisY = pelvisY,
@@ -1246,8 +1251,8 @@ internal class Szene3DRenderer {
                 headRoll = -pelvisRoll * 0.6f,
                 thighL = thighL, kneeL = kneeL, footPitchL = footL,
                 thighR = thighR, kneeR = kneeR, footPitchR = footR,
-                shL = shL, shLOut = 7.5f, elbL = elbL,
-                shR = shR, shROut = 7.5f, elbR = elbR,
+                shL = shL, shLOut = armOutDeg, elbL = elbL,
+                shR = shR, shROut = armOutDeg, elbR = elbR,
                 blink = blink,
                 smileLift = smileLift,
             )
@@ -1420,8 +1425,8 @@ internal class Szene3DRenderer {
         }
 
         return when {
-            // ---- 0.0..0.9s: Hinter der sich öffnenden Tür warten ----
-            t < 0.9f -> standPose(-2.48f, -0.24f, 0f)
+            // ---- 0.0..0.9s: Hinter der sich öffnenden Tür warten (mittig vor der Türöffnung) ----
+            t < 0.9f -> standPose(-2.65f, -0.36f, 0f)
 
             // ---- 0.9..5.2s: Durch die Tür mit sichtbar großzügigem Abstand am Stuhl vorbeigehen ----
             t < 5.2f -> evalEnterWalk(t - 0.9f, 4.3f, glanceStart = 1.6f, glanceDur = 1.7f)
@@ -1583,7 +1588,7 @@ internal class Szene3DRenderer {
             }
 
             // ---- 39.75..54.6s: Eigenständige dunkle Nacht & Sonnenaufgang (Mensch außerhalb des Raums) ----
-            t < 54.6f -> standPose(-2.52f, -0.24f, 0f)
+            t < 54.6f -> standPose(-2.65f, -0.36f, 0f)
 
             // ---- 54.6..58.9s: Rückkehr des Menschen im hellen Morgenlicht (wieder mit weitem Abstand zum Stuhl!) ----
             t < 58.9f -> evalEnterWalk(t - 54.6f, 4.3f, glanceStart = 1.5f, glanceDur = 1.8f)
@@ -1884,6 +1889,7 @@ internal class Szene3DRenderer {
         val gaitAmp: Float,
         val sitAmt: Float,
         val curlAmt: Float,
+        val jumpAmt: Float,
         val headYaw: Float,
         val headPitch: Float,
         val tailBase: Float,
@@ -1901,40 +1907,57 @@ internal class Szene3DRenderer {
         val deskCatY = 0.763f
         val deskCatZ = CAT_DESK_Z
 
-        // Gemeinsamer Weg: durch die Tür direkt links oben ins Körbchen steigen & einkuscheln
+        // Blickwinkel für den sauberen Bogensprung ins Körbchen bzw. aus dem Körbchen heraus
+        val hopInYaw = atan2(-(CAT_BASKET_Z - CAT_BASKET_OUT_Z), CAT_BASKET_X - CAT_BASKET_OUT_X) * (180f / PI_F)
+        val hopOutYaw = atan2(-(CAT_BASKET_OUT_Z - CAT_BASKET_Z), CAT_BASKET_OUT_X - CAT_BASKET_X) * (180f / PI_F)
+
+        // Gemeinsamer Weg: durch die Tür vor das Körbchen links oben traben, sauber ÜBER den Rand hineinhüpfen & einkuscheln
         fun evalCatEnterToBasket(localT: Float): CatPose {
-            val walkDur = 4.6f
+            val approachDur = 3.75f
+            val hopDur = 0.62f
+            val hopEnd = approachDur + hopDur
             return when {
-                localT < walkDur -> {
-                    val uRaw = (localT / walkDur).coerceIn(0f, 1f)
+                localT < approachDur -> {
+                    val uRaw = (localT / approachDur).coerceIn(0f, 1f)
                     val u = smoother(uRaw)
-                    val dist = catToBasketPath.distanceAt(u)
-                    val cx = catToBasketPath.evalX(u)
-                    val cz = catToBasketPath.evalZ(u)
-                    val yaw = catToBasketPath.evalYawDeg(u)
-                    // Sanfter Schritt über den niedrigen Korbrand ins Kissen
-                    val stepIn = smoothPhase(uRaw, 0.80f, 0.20f)
-                    val cy = mix(0f, CAT_BASKET_Y, stepIn) + sin(stepIn * PI_F) * 0.085f
-                    val pitch = sin(stepIn * PI_F) * 14f
-                    val amp = smoothPhase(uRaw, 0f, 0.10f) * (1f - smoothPhase(uRaw, 0.86f, 0.14f))
+                    val dist = catToBasketApproachPath.distanceAt(u)
+                    val cx = catToBasketApproachPath.evalX(u)
+                    val cz = catToBasketApproachPath.evalZ(u)
+                    val yaw = catToBasketApproachPath.evalYawDeg(u)
+                    val amp = smoothPhase(uRaw, 0f, 0.10f) * (1f - smoothPhase(uRaw, 0.85f, 0.15f))
                     CatPose(
-                        cx, cy, cz, yaw, pitch, 0f,
+                        cx, 0f, cz, yaw, 0f, 0f,
                         dist * (PI_F / CAT_STEP_LEN), amp,
-                        0f, 0f, sin(visualTime * 1.3f) * 12f, -6f,
+                        0f, 0f, 0f, sin(visualTime * 1.3f) * 12f, -6f,
                         64f, 17f, earT, blink,
                     )
                 }
+                localT < hopEnd -> {
+                    // Sauberer Bogensprung hoch ÜBER die Korbwand (alle 4 Pfoten mit Luft über dem Rand!)
+                    val k = phase(localT, approachDur, hopDur)
+                    val arc = sin(k * PI_F)
+                    val cx = mix(CAT_BASKET_OUT_X, CAT_BASKET_X, k)
+                    val cz = mix(CAT_BASKET_OUT_Z, CAT_BASKET_Z, k)
+                    val cy = mix(0f, CAT_BASKET_Y, k) + arc * 0.25f
+                    val arriveYaw = catToBasketApproachPath.evalYawDeg(0.995f)
+                    val yaw = lerpAngleDeg(arriveYaw, hopInYaw, smooth(k))
+                    val pitch = (0.45f - k) * 38f
+                    CatPose(
+                        cx, cy, cz, yaw, pitch, 0f,
+                        0f, 0f, 0f, 0f, arc,
+                        0f, -8f, 32f, 12f, earT, blink,
+                    )
+                }
                 else -> {
-                    // Im Körbchen umdrehen Richtung Raum/Mensch und gemütlich einrollen
-                    val settle = smootherPhase(localT, walkDur, 1.15f)
-                    val arriveYaw = catToBasketPath.evalYawDeg(0.995f)
-                    val restYaw = lerpAngleDeg(arriveYaw, -28f, settle)
+                    // Im Körbchen ruhig Richtung Raum/Mensch drehen und gemütlich einrollen
+                    val settle = smootherPhase(localT, hopEnd, 1.38f)
+                    val restYaw = lerpAngleDeg(hopInYaw, -28f, settle)
                     CatPose(
                         CAT_BASKET_X, CAT_BASKET_Y, CAT_BASKET_Z,
-                        restYaw, 18f * settle, 0.042f * settle,
-                        0f, 0f, settle, settle * 0.85f,
+                        restYaw, 18f * settle, 0.036f * settle,
+                        0f, 0f, settle, settle * 0.85f, 0f,
                         mix(0f, 10f, settle), -8f * settle,
-                        mix(58f, 14f, settle), mix(16f, 7f, settle), earT,
+                        mix(44f, 14f, settle), mix(14f, 7f, settle), earT,
                         max(blink, settle * 0.35f),
                     )
                 }
@@ -1947,8 +1970,8 @@ internal class Szene3DRenderer {
             val sleepy = 0.35f + 0.30f * (0.5f + 0.5f * sin(visualTime * 0.42f))
             return CatPose(
                 CAT_BASKET_X, CAT_BASKET_Y, CAT_BASKET_Z,
-                -28f, 18f, 0.042f,
-                0f, 0f, 1f, 0.85f,
+                -28f, 18f, 0.036f,
+                0f, 0f, 1f, 0.85f, 0f,
                 10f + look, -8f + sin(visualTime * 0.45f) * 4f,
                 14f, 7f, earT * 0.7f, max(blink, sleepy),
             )
@@ -1956,45 +1979,59 @@ internal class Szene3DRenderer {
 
         return when {
             // ---- 0.0..1.8s: Hinter dem Menschen vor der Tür ----
-            t < 1.8f -> CatPose(-2.62f, 0f, -0.28f, 6f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 45f, 10f, earT, blink)
+            t < 1.8f -> CatPose(-2.62f, 0f, -0.30f, 6f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 45f, 10f, earT, blink)
 
-            // ---- 1.8..7.55s: Durch die Tür direkt links oben ins Körbchen gehen & einkuscheln ----
+            // ---- 1.8..7.55s: Durch die Tür links oben ins Körbchen hüpfen & einkuscheln ----
             t < 7.55f -> evalCatEnterToBasket(t - 1.8f)
 
-            // ---- 7.55..24.1s: Gemütlich links oben im Körbchen ruhen & den Raum beobachten ----
-            t < 24.1f -> basketRestPose()
+            // ---- 7.55..24.05s: Gemütlich links oben im Körbchen ruhen & den Raum beobachten ----
+            t < 24.05f -> basketRestPose()
 
-            // ---- 24.1..24.75s: Katzenpause beginnt — im Körbchen aufwachen & aufstehen ----
-            t < 24.75f -> {
-                val up = smootherPhase(t, 24.1f, 0.65f)
-                val startYaw = catBasketToHumanPath.evalYawDeg(0.005f)
+            // ---- 24.05..24.65s: Im Körbchen aufstehen & Richtung Ausstieg drehen (alle 4 Pfoten bleiben im Kissen!) ----
+            t < 24.65f -> {
+                val up = smootherPhase(t, 24.05f, 0.48f)
+                val crouch = smootherPhase(t, 24.42f, 0.23f)
                 CatPose(
                     CAT_BASKET_X, CAT_BASKET_Y, CAT_BASKET_Z,
-                    lerpAngleDeg(-28f, startYaw, up),
-                    mix(18f, 0f, up),
-                    mix(0.042f, 0f, up),
-                    0f, 0f, 1f - up, (1f - up) * 0.85f,
-                    mix(10f, 4f, up), -10f,
-                    mix(14f, 62f, up), mix(7f, 18f, up), earT, blink,
+                    lerpAngleDeg(-28f, hopOutYaw, up),
+                    mix(18f, 0f, up) - crouch * 7f,
+                    mix(0.036f, 0f, up) + crouch * 0.018f,
+                    0f, 0f, 1f - up, (1f - up) * 0.85f, 0f,
+                    mix(10f, 0f, up), -10f - crouch * 8f,
+                    mix(14f, 48f, up), mix(7f, 16f, up), earT, blink,
                 )
             }
 
-            // ---- 24.75..27.15s: Das Körbchen verlassen und zügig & natürlich zum Menschen laufen ----
-            t < 27.15f -> {
-                val uRaw = phase(t, 24.75f, 2.40f)
-                val u = smoother(uRaw)
-                val dist = catBasketToHumanPath.distanceAt(u)
-                val cx = catBasketToHumanPath.evalX(u)
-                val cz = catBasketToHumanPath.evalZ(u)
-                val yaw = catBasketToHumanPath.evalYawDeg(u)
-                val stepOut = smoothPhase(uRaw, 0f, 0.16f)
-                val cy = mix(CAT_BASKET_Y, 0f, stepOut) + sin(stepOut * PI_F) * 0.075f
-                val pitch = -sin(stepOut * PI_F) * 12f
-                val amp = smoothPhase(uRaw, 0f, 0.12f) * (1f - smoothPhase(uRaw, 0.86f, 0.14f))
+            // ---- 24.65..25.27s: Eleganter Bogensprung ÜBER die Korbwand hinaus auf den freien Boden (null Wandkontakt!) ----
+            t < 25.27f -> {
+                val k = phase(t, 24.65f, 0.62f)
+                val arc = sin(k * PI_F)
+                val cx = mix(CAT_BASKET_X, CAT_BASKET_OUT_X, k)
+                val cz = mix(CAT_BASKET_Z, CAT_BASKET_OUT_Z, k)
+                val cy = mix(CAT_BASKET_Y, 0f, k) + arc * 0.25f
+                val exitYaw = catBasketOutToHumanPath.evalYawDeg(0.005f)
+                val yaw = lerpAngleDeg(hopOutYaw, exitYaw, smooth(k))
+                val pitch = (0.45f - k) * 38f
                 CatPose(
                     cx, cy, cz, yaw, pitch, 0f,
+                    0f, 0f, 0f, 0f, arc,
+                    4f, -10f, 38f, 16f, earT, blink,
+                )
+            }
+
+            // ---- 25.27..27.15s: Vom freien Boden vor dem Körbchen zügig & natürlich zum Menschen traben ----
+            t < 27.15f -> {
+                val uRaw = phase(t, 25.27f, 1.88f)
+                val u = smoother(uRaw)
+                val dist = catBasketOutToHumanPath.distanceAt(u)
+                val cx = catBasketOutToHumanPath.evalX(u)
+                val cz = catBasketOutToHumanPath.evalZ(u)
+                val yaw = catBasketOutToHumanPath.evalYawDeg(u)
+                val amp = smoothPhase(uRaw, 0f, 0.14f) * (1f - smoothPhase(uRaw, 0.84f, 0.16f))
+                CatPose(
+                    cx, 0f, cz, yaw, 0f, 0f,
                     dist * (PI_F / CAT_STEP_LEN), amp,
-                    0f, 0f, 8f, -12f,
+                    0f, 0f, 0f, 8f, -12f,
                     66f, 20f, earT, blink,
                 )
             }
@@ -2002,12 +2039,12 @@ internal class Szene3DRenderer {
             // ---- 27.15..27.70s: Niedriges Ducken vor dem Schreibtisch (Antizipation vor dem Sprung) ----
             t < 27.70f -> {
                 val crouch = smootherPhase(t, 27.15f, 0.50f)
-                val arriveYaw = catBasketToHumanPath.evalYawDeg(0.995f)
+                val arriveYaw = catBasketOutToHumanPath.evalYawDeg(0.995f)
                 CatPose(
                     CAT_LAUNCH_X, 0f, CAT_LAUNCH_Z,
                     lerpAngleDeg(arriveYaw, 44f, crouch),
                     -13f * crouch, 0.062f * crouch,
-                    0f, 0f, 0f, 0f,
+                    0f, 0f, 0f, 0f, 0f,
                     0f, -26f * crouch,
                     28f, 24f, earT, blink,
                 )
@@ -2016,11 +2053,12 @@ internal class Szene3DRenderer {
             // ---- 27.70..28.35s: Eleganter 3D-Bogensprung auf die Schreibtischente ----
             t < 28.35f -> {
                 val k = phase(t, 27.70f, 0.65f)
+                val arc = sin(k * PI_F)
                 val cx = mix(CAT_LAUNCH_X, deskCatX, k)
                 val cz = mix(CAT_LAUNCH_Z, deskCatZ, k)
-                val cy = mix(0f, deskCatY, k) + sin(k * PI_F) * 0.36f
+                val cy = mix(0f, deskCatY, k) + arc * 0.36f
                 val pitch = (0.5f - k) * 60f
-                CatPose(cx, cy, cz, mix(44f, 56f, k), pitch, 0f, k * PI_F, 0f, 0f, 0f, 0f, -10f, 18f, 12f, earT, blink)
+                CatPose(cx, cy, cz, mix(44f, 56f, k), pitch, 0f, k * PI_F, 0f, 0f, 0f, arc, 0f, -10f, 18f, 12f, earT, blink)
             }
 
             // ---- 28.35..32.05s: Auf dem Schreibtisch sitzen, zum Menschen schauen & gestreichelt werden ----
@@ -2034,7 +2072,7 @@ internal class Szene3DRenderer {
                     lerpAngleDeg(56f, 165f, turn),
                     24f * sit - petted * 5f,
                     0.028f * sit,
-                    0f, 0f, sit, 0f,
+                    0f, 0f, sit, 0f, 0f,
                     mix(0f, 6f, turn) + purrNod * 0.4f,
                     -14f * petted + purrNod,
                     38f + petted * 24f,
@@ -2047,10 +2085,11 @@ internal class Szene3DRenderer {
             // ---- 32.05..32.70s: Sanft vom Schreibtisch herunterhüpfen ----
             t < 32.70f -> {
                 val k = phase(t, 32.05f, 0.65f)
+                val arc = sin(k * PI_F)
                 val cx = mix(deskCatX, 0.56f, k)
                 val cz = mix(deskCatZ, 0.46f, k)
-                val cy = mix(deskCatY, 0f, k) + sin(k * PI_F) * 0.18f
-                CatPose(cx, cy, cz, 168f, (0.35f - k) * 46f, 0f, 0f, 0f, 0f, 0f, 0f, 8f, 50f, 12f, earT, blink)
+                val cy = mix(deskCatY, 0f, k) + arc * 0.18f
+                CatPose(cx, cy, cz, 168f, (0.35f - k) * 46f, 0f, 0f, 0f, 0f, 0f, arc * 0.7f, 0f, 8f, 50f, 12f, earT, blink)
             }
 
             // ---- 32.70..35.3s: Im Bogen vor dem Stuhl Richtung Tür traben & auf den Menschen warten ----
@@ -2064,7 +2103,7 @@ internal class Szene3DRenderer {
                     catDeskToWaitPath.evalX(u), 0f, catDeskToWaitPath.evalZ(u),
                     catDeskToWaitPath.evalYawDeg(u),
                     0f, 0f, dist * (PI_F / CAT_STEP_LEN), amp,
-                    0f, 0f, sin(visualTime * 1.5f) * 18f - lookBack, -10f,
+                    0f, 0f, 0f, sin(visualTime * 1.5f) * 18f - lookBack, -10f,
                     68f, 16f, earT, blink,
                 )
             }
@@ -2079,12 +2118,12 @@ internal class Szene3DRenderer {
                     catWaitToExitPath.evalX(u), 0f, catWaitToExitPath.evalZ(u),
                     catWaitToExitPath.evalYawDeg(u),
                     0f, 0f, dist * (PI_F / CAT_STEP_LEN), amp,
-                    0f, 0f, 0f, 0f, 66f, 18f, earT, blink,
+                    0f, 0f, 0f, 0f, 0f, 66f, 18f, earT, blink,
                 )
             }
 
             // ---- 38.8..55.4s: Dunkle Nacht & Sonnenaufgang (draußen) ----
-            t < 55.4f -> CatPose(-2.70f, 0f, -0.32f, 6f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 45f, 10f, earT, blink)
+            t < 55.4f -> CatPose(-2.70f, 0f, -0.32f, 6f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 45f, 10f, earT, blink)
 
             // ---- 55.4..61.15s: Rückkehr im Morgenlicht direkt wieder ins Körbchen links oben ----
             t < 61.15f -> evalCatEnterToBasket(t - 55.4f)
@@ -2173,18 +2212,20 @@ internal class Szene3DRenderer {
                 }
             }
 
-            // ---- 4 artikulierte Katzenbeine (Diagonalgang beim Laufen, eingekuschelt beim Sitzen/Körbchen) ----
+            // ---- 4 artikulierte Katzenbeine (Diagonalgang, eingekuschelt im Körbchen, sauber angezogen beim Sprung) ----
             val fl = sin(c.gaitPhase) * 32f * c.gaitAmp
             val fr = sin(c.gaitPhase + PI_F) * 32f * c.gaitAmp
             val bl = sin(c.gaitPhase + PI_F) * 32f * c.gaitAmp
             val br = sin(c.gaitPhase) * 32f * c.gaitAmp
 
-            val frontTuck = c.sitAmt * 8f + c.curlAmt * 24f
-            val frontBend = c.sitAmt * 12f + c.curlAmt * 32f
+            val frontTuck = c.sitAmt * 8f + c.curlAmt * 24f - c.jumpAmt * 26f
+            val frontBend = c.sitAmt * 12f + c.curlAmt * 32f + c.jumpAmt * 44f
+            val backSwingOffset = c.sitAmt * 56f + c.jumpAmt * 20f
+            val backBend = c.sitAmt * 50f + c.jumpAmt * 46f
             drawCatLeg(p, x = 0.11f, z = -0.052f, swing = fl - frontTuck, bend = frontBend)
             drawCatLeg(p, x = 0.11f, z = +0.052f, swing = fr - frontTuck, bend = frontBend)
-            drawCatLeg(p, x = -0.11f, z = -0.056f, swing = bl + c.sitAmt * 56f, bend = c.sitAmt * 50f)
-            drawCatLeg(p, x = -0.11f, z = +0.056f, swing = br + c.sitAmt * 56f, bend = c.sitAmt * 50f)
+            drawCatLeg(p, x = -0.11f, z = -0.056f, swing = bl + backSwingOffset, bend = backBend)
+            drawCatLeg(p, x = -0.11f, z = +0.056f, swing = br + backSwingOffset, bend = backBend)
         }
     }
 
@@ -2338,7 +2379,11 @@ internal class Szene3DRenderer {
         // Gemütliches Katzenkörbchen links oben am Boden (klar getrennt von Pflanze, Tür und Laufweg)
         private const val CAT_BASKET_X = -1.04f
         private const val CAT_BASKET_Z = -1.24f
-        private const val CAT_BASKET_Y = 0.064f
+        private const val CAT_BASKET_Y = 0.068f
+
+        // Freier Absprung- und Landepunkt sauber außerhalb des Korbrands (Abstand 0.55 m zur Korbmitte)
+        private const val CAT_BASKET_OUT_X = -0.74f
+        private const val CAT_BASKET_OUT_Z = -0.78f
 
         // Katzen-Absprungpunkt vor dem Schreibtisch & Landeplatz auf der vorderen rechten Tischecke
         private const val CAT_LAUNCH_X = 0.64f

@@ -116,6 +116,7 @@
     {"versionCode": 112, "versionName": "1.0.111", "stand": "24.11.2026, 10:30 Uhr", "notiz": "Nach dem Abhaken einer Karte erscheint unten „Erledigt“ mit Rückgängig, falls du dich vertippt hast; die Suche zeigt Heute nicht mehr leer an, wenn der Treffer unter Erledigt steht."},
     {"versionCode": 113, "versionName": "1.0.112", "stand": "24.11.2026, 10:39 Uhr", "notiz": "Zeitleiste: Auch dort laufen zu lange Aufgabentexte jetzt als Lauftext durch, statt mit drei Punkten abgeschnitten zu werden."},
     {"versionCode": 114, "versionName": "1.0.113", "stand": "24.11.2026, 10:45 Uhr", "notiz": "Lauftext: Am Textende bleibt er jetzt drei Sekunden zum Lesen stehen, springt dann zum Anfang zurück und wartet dort ebenfalls drei Sekunden, bevor er wieder losläuft."},
-    {"versionCode": 115, "versionName": "1.0.114", "stand": "24.11.2026, 10:58 Uhr", "notiz": "Zeitstrahl: Würde die rote Uhrzeit in der Mitte eine Aufgabe verdecken, steht sie jetzt links neben dem Zeitpfeil, rot umrandet und ohne „Uhr“, und ersetzt dort eine kollidierende Stundenbeschriftung; ist wieder Platz, kehrt sie in die Mitte zurück."}
+    {"versionCode": 115, "versionName": "1.0.114", "stand": "24.11.2026, 10:58 Uhr", "notiz": "Zeitstrahl: Würde die rote Uhrzeit in der Mitte eine Aufgabe verdecken, steht sie jetzt links neben dem Zeitpfeil, rot umrandet und ohne „Uhr“, und ersetzt dort eine kollidierende Stundenbeschriftung; ist wieder Platz, kehrt sie in die Mitte zurück."},
+    {"versionCode": 116, "versionName": "1.0.115", "stand": "24.11.2026, 11:04 Uhr", "notiz": "3D-Szene: Mensch geht mittig durch die Tür ohne Wand- oder Rahmenkontakt des Arms, und die Katze springt beim Aufstehen sauber über den Korbrand ohne Pfotendurchdringung."}
 ]
 }
