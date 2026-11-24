@@ -920,6 +920,25 @@
       "ruecknahme": "In handy-use/SKILL.md den Punkt beginnend mit ‚Keine blinden Tipp-Ketten über einen Ansichtswechsel‘ entfernen.",
       "kosten": "eine Zeile in einer Bedarfsdatei",
       "status": "aktiv"
+    },
+    {
+      "id": "M51",
+      "titel": "wc -l auf macOS normieren, Warte-Schleifen bei Fehler abbrechen",
+      "datum": "2026-11-24T12:04",
+      "beleg": "Sitzung 40bf518f: Warteschleife auf ‚Meldung fertig‘ im hook.log lief 60 min mit ‚tail: illegal offset -- +    4313‘, Meldung kam nach 14 min; ca. 46 min Leerlauf",
+      "ort": [
+        "bugs/werkzeuge/agenten-shell-aliase.md"
+      ],
+      "werkzeug": "Bash",
+      "fehler_regex": "illegal offset -- \\+ +\\d",
+      "auch_ohne_fehlerstatus": true,
+      "pruefung": "Keine Ausgabe ‚tail: illegal offset -- +    N‘ mehr in späteren Sitzungen.",
+      "ruecknahme": "In bugs/werkzeuge/agenten-shell-aliase.md den Abschnitt ‚## Bug 3: `wc -l` auf macOS rückt die Zahl ein‘ entfernen.",
+      "kosten": "drei Zeilen in einem Bedarfs-Almanach",
+      "status": "aktiv",
+      "plattform": [
+        "mac"
+      ]
     }
   ]
 }

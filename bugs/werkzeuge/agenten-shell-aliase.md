@@ -13,6 +13,10 @@ Stand: 15.11.2026 (macOS, zsh, Claude Code mit Shell-Schnappschuss, eza 0.2x)
 - **Root Cause:** `pgrep -f` durchsucht die ganze Befehlszeile. Die Schleife selbst (und die wartende Eltern-Shell) enthalten genau diesen Text, also gilt der Bau immer als „läuft noch“.
 - **Fix:** Keine eigenen Warte-Schleifen um einen Bau. Den Bau direkt im Vordergrund starten (`bash gradlew assembleDebug -q`, ohne Pipe in `head`), ist er länger, schiebt ihn das Werkzeug in den Hintergrund und meldet sich beim Ende selbst. Muss doch gewartet werden: auf das Ergebnis prüfen (APK-Zeitstempel neuer als der Start, `output-metadata.json`), nie auf Prozessnamen.
 
+## Bug 3: `wc -l` auf macOS rückt die Zahl ein, Warte-Schleife läuft blind bis zum Ende
+- **Symptom:** `S=$(wc -l < log); … tail -n +$S log | grep -q "Meldung fertig"` wartete 60 min, obwohl die Meldung nach 14 min im Log stand (24.11.2026).
+- **Ursache/Fix:** BSD-`wc` liefert `    4313`; `tail -n +    4313` scheitert bei jedem Durchlauf („illegal offset“) auf stderr, `grep -q` sieht nichts. Zahl normieren: `S=$(( $(wc -l < log) ))`, und eine Warte-Schleife beim ersten Fehler abbrechen lassen (`|| exit 1`), statt sie still weiterlaufen zu lassen.
+
 ## Verwandte Fallen (geprüft)
 - `cat`→`bat`: im Nicht-Terminal unkritisch, aber ebenfalls nur noch im echten Terminal aktiv.
 - `Jarvis/gradlew` ohne Ausführungsrecht: immer `bash gradlew`; eine Pipe auf grep verschluckt den Fehler, deshalb die APK mit aapt2 prüfen (siehe Gedächtnis „OpenLauncher Server“).
