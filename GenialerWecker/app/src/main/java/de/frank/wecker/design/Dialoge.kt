@@ -24,6 +24,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -207,6 +208,10 @@ fun DesignDialog(
         // derselben Farbe. Alle Paletten (Farben.kt und Paletten.kt) führen `flaeche` und
         // `flaecheErhoeht` als volldeckende 0xFF-Farben, und der weiche Palettenwechsel in
         // `GenialeIdeenTheme` behält den Alphawert bei — hinter dem Inhalt scheint also nichts durch.
+        // Die einstellbare Kartendeckkraft gilt nur für Karten auf dem Hintergrund, nie für Dialoge:
+        // Der Rahmen nutzt die HERO-Ebene, die sonst die Deckkraft übernähme — bei 0 % stand der
+        // Dialog „Änderungen speichern?" völlig durchsichtig über dem Editor. Deshalb hier fest 100 %.
+        CompositionLocalProvider(LocalKartenDeckkraft provides 1f) {
         if (tokens.plastisch) {
             // Schlicht behält den gewohnten Gold-Look mit Verlauf, Lichtkante und Tiefenschatten.
             GoldKarte(modifier = rahmen, erhoeht = true, inhalt = koerper)
@@ -220,6 +225,7 @@ fun DesignDialog(
                 erhoeht = true,
                 inhalt = koerper,
             )
+        }
         }
     }
 }
