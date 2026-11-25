@@ -52,7 +52,7 @@ class VorleseDienst : Service() {
         sitzung = MediaSessionCompat(this, "JarvisVorlesen").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPause() {
-                    if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
+                    if (mentalitaetSteuert()) {
                         de.frank.jarvis.mentalitaet.MentalitaetSpieler.pausieren()
                     } else {
                         Vorleser.aktuell()?.pause()
@@ -60,7 +60,7 @@ class VorleseDienst : Service() {
                 }
 
                 override fun onPlay() {
-                    if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
+                    if (mentalitaetSteuert()) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
                 }
 
                 override fun onStop() {
@@ -114,13 +114,13 @@ class VorleseDienst : Service() {
 
         when (intent?.action) {
             VorleseAktion.PAUSE -> {
-                if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
+                if (mentalitaetSteuert()) {
                     de.frank.jarvis.mentalitaet.MentalitaetSpieler.pausieren()
                 } else {
                     Vorleser.aktuell()?.pause()
                 }
             }
-            VorleseAktion.WEITER -> if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
+            VorleseAktion.WEITER -> if (mentalitaetSteuert()) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
             VorleseAktion.STOPP -> {
                 Vorleser.aktuell()?.stopp()
                 de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
@@ -135,6 +135,11 @@ class VorleseDienst : Service() {
         }
         return START_NOT_STICKY
     }
+
+    /** Pause/Weiter gehören der Mentalität, außer ein anderes Vorlesen läuft gerade über ihrer pausierten Session. */
+    private fun mentalitaetSteuert(): Boolean =
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv &&
+            Vorleser.aktuell()?.stand?.value?.zustand.let { it == null || it == VorleseZustand.AUS }
 
     /** Verlässt den Vordergrund ordentlich, bevor der Dienst stirbt. */
     private fun halteAn() {
@@ -305,6 +310,11 @@ class VorleseDienst : Service() {
          */
         fun beenden(context: Context) {
             if (!laeuft) return
+            // Eine pausierte Mentalität-Session braucht Dienst und Meldung weiter: nur ihre Meldung wieder zeigen.
+            if (de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
+                de.frank.jarvis.mentalitaet.MentalitaetSpieler.meldungZeigen()
+                return
+            }
             val intent = Intent(context, VorleseDienst::class.java).setAction(VorleseAktion.SCHLIESSEN)
             runCatching { context.startService(intent) }
                 .onFailure {

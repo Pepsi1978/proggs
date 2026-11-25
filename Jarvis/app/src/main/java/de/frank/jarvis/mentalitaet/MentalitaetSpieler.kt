@@ -630,8 +630,16 @@ object MentalitaetSpieler {
     fun fortsetzen() {
         if (Looper.myLooper() != Looper.getMainLooper()) { haupt.post { fortsetzen() }; return }
         if (!aktiv || !manuellPausiert.value) return
-        manuellPausiert.value = false
         val app = appContext
+        // Während der Pause gestartete Ausgaben anderer Funktionen beenden, damit sich nichts überlagert.
+        runCatching { Vorleser.aktuell()?.takeIf { it.stand.value.zustand != VorleseZustand.AUS }?.stopp(dienstBeenden = false) }
+        if (AtemSitzung.offen) runCatching { AtemSitzung.beenden() }
+        // Ging der Tonfokus in der Pause an eine andere Ausgabe, wird er jetzt neu geholt.
+        if (fokusAnfrage == null && app != null && !fokusHolen(app)) {
+            _stand.value = _stand.value.copy(fehler = "Tonfokus wurde verweigert (läuft gerade ein Anruf?).")
+            return
+        }
+        manuellPausiert.value = false
         app?.let { wachErneuern(it) }
         if (!pausiertDurchFokus) {
             aktiverSpieler?.takeIf { !it.fertig }?.mp?.let { runCatching { if (!it.isPlaying) it.start() } }
@@ -639,6 +647,22 @@ object MentalitaetSpieler {
         _stand.value = _stand.value.copy(pausiert = false)
         app?.let { VorleseDienst.aktualisiere(it, "Mentalität", letzteNummer, letzteGesamt, pausiert = false) }
         Logbuch.sprache("Mentalität fortgesetzt", "phase=${_stand.value.phase}")
+    }
+
+    /**
+     * Eine andere Jarvis-Funktion (Diktat, Vorlesen, Atemübung, Gespräch) braucht Ton oder Mikrofon:
+     * Die Mentalität wird nur angehalten, nie beendet. Dieselbe Session bleibt mit ihrer Stelle erhalten
+     * und läuft erst nach Weiter dort fort.
+     */
+    fun zurueckstellen() {
+        if (Looper.myLooper() != Looper.getMainLooper()) { haupt.post { zurueckstellen() }; return }
+        if (aktiv) pausieren()
+    }
+
+    /** Zeigt die Meldung der pausierten Session wieder, nachdem ein anderes Vorlesen den gemeinsamen Dienst räumen wollte. */
+    fun meldungZeigen() {
+        val app = appContext ?: return
+        if (aktiv) VorleseDienst.aktualisiere(app, "Mentalität", letzteNummer, letzteGesamt, pausiert = manuellPausiert.value)
     }
 
     fun pauseUmschalten() {
@@ -799,7 +823,12 @@ object MentalitaetSpieler {
                             }
                         }
                     }
-                    AudioManager.AUDIOFOCUS_LOSS -> stopp()
+                    // Dauerhaft verloren (andere Ausgabe übernimmt): anhalten statt beenden; Weiter holt den Fokus neu.
+                    AudioManager.AUDIOFOCUS_LOSS -> {
+                        fokusAbgeben()
+                        pausiertDurchFokus = false
+                        pausieren()
+                    }
                 }
             }, haupt)
             .build()

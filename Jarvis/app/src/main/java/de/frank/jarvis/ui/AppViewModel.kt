@@ -1667,7 +1667,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nimmtAuf || schreibtMit || holtMikro -> meldung = "Es läuft schon eine Aufnahme. Bitte erst diese beenden."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> {
-                de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                de.frank.jarvis.mentalitaet.MentalitaetSpieler.zurueckstellen()
                 mentalitaetStartAbbrechen = false
                 diktatZiel = { text ->
                     viewModelScope.launch {
@@ -2184,7 +2184,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Eine diktierte Antwort auf die Rückfrage beendet das dafür angehaltene Vorlesen nicht.
         if (antwortDiktatFeld == null || !vorleser.unterbrochen) vorleser.stopp() else vorleser.einschuebeAbbrechen()
-        de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.zurueckstellen()
         holtMikro = true
         viewModelScope.launch {
             try {
