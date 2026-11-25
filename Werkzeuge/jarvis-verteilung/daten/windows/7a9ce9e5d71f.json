@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Nur Android-Karte der Mac-Zentrale (Mac-Updater per Handy); JarvisWindows hat diese Karte nicht, das Werkzeug updatezentrale liest hauptversionNurPerKlick nicht",
+ "review": "",
+ "tests": "",
  "host": "Power-PC",
- "ziel": "power",
- "zeit": "2026-11-25T11:24:33+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T11:25:12+01:00"
 }
