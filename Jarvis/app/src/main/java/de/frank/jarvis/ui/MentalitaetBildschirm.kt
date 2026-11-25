@@ -47,12 +47,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,6 +88,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.mentalitaet.MAX_PAUSE_SEKUNDEN
+import de.frank.jarvis.mentalitaet.MAX_SLEEP_MINUTEN
+import de.frank.jarvis.mentalitaet.MIN_SLEEP_MINUTEN
 import de.frank.jarvis.mentalitaet.MAX_WIEDERHOLUNGEN
 import de.frank.jarvis.mentalitaet.MIN_PAUSE_SEKUNDEN
 import de.frank.jarvis.mentalitaet.MIN_WIEDERHOLUNGEN
@@ -104,6 +109,7 @@ import de.frank.module.draganddrop.rememberReorderState
 import de.frank.module.draganddrop.reorderHandle
 import de.frank.module.draganddrop.reorderItem
 import de.frank.module.draganddrop.reorderViewport
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -128,6 +134,8 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     val einstellungen = remember(appContext) { Einstellungen.get(appContext) }
     val pauseSekunden = einstellungen.mentalitaetPauseSekunden
+    val sleepAn = einstellungen.mentalitaetSleepTimer
+    val sleepMinuten = einstellungen.mentalitaetSleepMinuten
     val saetze by MentalitaetSpeicher.stand.collectAsState()
     val speicherHinweis by MentalitaetSpeicher.hinweis.collectAsState()
     val spielStand by MentalitaetSpieler.stand.collectAsState()
@@ -503,6 +511,10 @@ fun MentalitaetBildschirm(vm: AppViewModel, modifier: Modifier = Modifier) {
             MentalitaetEinstellungenEbene(
                 pauseSekunden = pauseSekunden,
                 beiPauseAendern = { einstellungen.mentalitaetPauseSekunden = it },
+                sleepAn = sleepAn,
+                beiSleepAn = { einstellungen.mentalitaetSleepTimer = it },
+                sleepMinuten = sleepMinuten,
+                beiSleepMinuten = { einstellungen.mentalitaetSleepMinuten = it },
                 schliessen = { einstellungenOffen = false },
             )
         }
@@ -658,6 +670,10 @@ private fun MentalSatzKarte(
 private fun MentalitaetEinstellungenEbene(
     pauseSekunden: Int,
     beiPauseAendern: (Int) -> Unit,
+    sleepAn: Boolean,
+    beiSleepAn: (Boolean) -> Unit,
+    sleepMinuten: Int,
+    beiSleepMinuten: (Int) -> Unit,
     schliessen: () -> Unit,
 ) {
     val f = LocalFarben.current
@@ -798,9 +814,122 @@ private fun MentalitaetEinstellungenEbene(
                 )
             }
 
+            SleepTimerBereich(sleepAn, beiSleepAn, sleepMinuten, beiSleepMinuten)
+
             Knopf("Fertig", Modifier.fillMaxWidth(), farbe = MENTAL_AKZENT, aktion = schliessen)
         }
     }
+}
+
+/** Sleep-Timer: Schalter mit klarer An/Aus-Anzeige, direkt darunter der Regler für die Dauer in Minuten. */
+@Composable
+private fun SleepTimerBereich(
+    an: Boolean,
+    beiAn: (Boolean) -> Unit,
+    minuten: Int,
+    beiMinuten: (Int) -> Unit,
+) {
+    val f = LocalFarben.current
+    val haptik = LocalHapticFeedback.current
+    val wert = minuten.coerceIn(MIN_SLEEP_MINUTEN, MAX_SLEEP_MINUTEN)
+    val startZeit by MentalitaetSpieler.startZeit.collectAsState()
+    // Restzeit der laufenden Session, alle 15 Sekunden nachgeführt.
+    val restMinuten by produceState<Int?>(null, an, wert, startZeit) {
+        while (true) {
+            val start = startZeit
+            value = if (an && start != null) {
+                val rest = start + wert * 60_000L - android.os.SystemClock.elapsedRealtime()
+                ((rest + 59_999L) / 60_000L).toInt().coerceAtLeast(0)
+            } else null
+            delay(15_000L)
+        }
+    }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove); beiAn(!an) }
+            .padding(vertical = 6.dp)
+            .semantics { contentDescription = "Sleep-Timer ${if (an) "an" else "aus"}" },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text("Sleep-Timer", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                when {
+                    !an -> "Aus: Das Vorlesen läuft endlos."
+                    restMinuten != null -> "An: endet in etwa $restMinuten Min."
+                    else -> "An: endet $wert Min. nach Vorlesestart."
+                },
+                color = if (an) MENTAL_AKZENT else f.textLeise,
+                fontSize = 13.sp,
+                fontWeight = if (an) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Switch(
+            checked = an,
+            onCheckedChange = { haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove); beiAn(it) },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = MENTAL_AKZENT,
+                uncheckedTrackColor = f.flaecheStark,
+            ),
+        )
+    }
+
+    Row(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Dauer",
+            color = if (an) f.text else f.textLeise,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    if (an) Brush.linearGradient(listOf(MENTAL_AKZENT, MENTAL_AKZENT_HELL))
+                    else Brush.linearGradient(listOf(f.flaecheStark, f.flaecheStark)),
+                )
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("$wert Minuten", color = if (an) Color.White else f.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+
+    Slider(
+        value = wert.toFloat(),
+        onValueChange = {
+            val neu = it.roundToInt().coerceIn(MIN_SLEEP_MINUTEN, MAX_SLEEP_MINUTEN)
+            if (neu != wert) {
+                haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                beiMinuten(neu)
+            }
+        },
+        valueRange = MIN_SLEEP_MINUTEN.toFloat()..MAX_SLEEP_MINUTEN.toFloat(),
+        steps = MAX_SLEEP_MINUTEN - MIN_SLEEP_MINUTEN - 1,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 14.dp)
+            .alpha(if (an) 1f else 0.55f)
+            .semantics {
+                contentDescription = "Dauer des Sleep-Timers: $wert Minuten, von $MIN_SLEEP_MINUTEN bis $MAX_SLEEP_MINUTEN Minuten"
+            },
+        colors = SliderDefaults.colors(
+            thumbColor = MENTAL_AKZENT,
+            activeTrackColor = MENTAL_AKZENT,
+            inactiveTrackColor = f.flaecheStark,
+            activeTickColor = Color.Transparent,
+            inactiveTickColor = Color.Transparent,
+        ),
+    )
 }
 
 /**

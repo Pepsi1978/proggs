@@ -41,6 +41,7 @@ class EinstellungenFaehigkeit(private val context: Context) : Faehigkeit {
                 "Mehrere Änderungen auf einmal über aenderungen. Beispiele: „Schalte die Update-Ansagen aus“ → aendern, kennung ansage_vorlesen, wert aus. " +
                 "„Was hast du beim Vorlesen für Einstellungen?“ → lesen, bereich Vorlesen. „Lies schneller vor“ → aendern, kennung vorlese_tempo_<Anbieter>, wert Zügig. " +
                 "„Stelle die Pause bei Mentalität auf 10 Sekunden“ → aendern, kennung mentalitaet_pause_sekunden, wert 10. " +
+                "„Sleep-Timer bei Mentalität auf 20 Minuten“ → aenderungen mentalitaet_sleep_timer an und mentalitaet_sleep_minuten 20. " +
                 "„Stelle den Gemini-Schlüssel auf nur bezahlt“ → aendern, kennung gemini_tts_schluessel, wert Nur bezahlt. „Nimm die Stimme Katja“ → aendern, kennung vorlese_stimme, wert Katja. " +
                 "Zugangsschlüssel und Passwörter gehen hier bewusst nicht.",
             schema = schema(
@@ -567,6 +568,8 @@ class EinstellungsKatalog(context: Context) {
             ) { w ->
                 e.mentalitaetPauseSekunden = de.frank.jarvis.mentalitaet.parseMentalitaetPauseSekunden(w)
             },
+            schalter("mentalitaet_sleep_timer", "Mentalität", "Sleep-Timer", "Beendet das kontinuierliche Vorlesen der mentalen Sätze nach der eingestellten Dauer ab Vorlesestart automatisch und ohne Ton, auch im Hintergrund und bei gesperrtem Bildschirm; aus = Endlosschleife wie bisher.", { e.mentalitaetSleepTimer }) { e.mentalitaetSleepTimer = it },
+            zahl("mentalitaet_sleep_minuten", "Mentalität", "Dauer des Sleep-Timers", "Nach so vielen Minuten ab Vorlesestart endet das Vorlesen bei „Mentalität“, wenn der Sleep-Timer an ist (Standard: ${de.frank.jarvis.mentalitaet.STANDARD_SLEEP_MINUTEN} Minuten, gilt auch für eine laufende Session).", de.frank.jarvis.mentalitaet.MIN_SLEEP_MINUTEN, de.frank.jarvis.mentalitaet.MAX_SLEEP_MINUTEN, "Minuten", { e.mentalitaetSleepMinuten }) { e.mentalitaetSleepMinuten = it },
             schalter("prompts_nach_quelle", "Ablage", "Prompts nach Quelle sortieren", "Zeigt die Prompts nach ihrer Jarvis-Version sortiert statt in der eigenen Reihenfolge.", { e.promptsNachQuelle }) { e.promptsNachQuelle = it },
 
             // ---- System ----

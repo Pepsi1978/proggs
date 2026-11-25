@@ -578,6 +578,18 @@ class Einstellungen private constructor(context: Context) {
                 v.coerceIn(de.frank.jarvis.mentalitaet.MIN_PAUSE_SEKUNDEN, de.frank.jarvis.mentalitaet.MAX_PAUSE_SEKUNDEN),
             )
         }
+    /** Sleep-Timer für das Vorlesen bei „Mentalität“: beendet die Endlosschleife nach [mentalitaetSleepMinuten] ab Vorlesestart. */
+    var mentalitaetSleepTimer: Boolean get() = prefs.getBoolean("mentalitaet_sleep_timer", false); set(v) = put { putBoolean("mentalitaet_sleep_timer", v) }
+    /** Dauer des Sleep-Timers in Minuten (1 bis 120, Standard 30). */
+    var mentalitaetSleepMinuten: Int
+        get() = prefs.getInt("mentalitaet_sleep_minuten", de.frank.jarvis.mentalitaet.STANDARD_SLEEP_MINUTEN)
+            .coerceIn(de.frank.jarvis.mentalitaet.MIN_SLEEP_MINUTEN, de.frank.jarvis.mentalitaet.MAX_SLEEP_MINUTEN)
+        set(v) = put {
+            putInt(
+                "mentalitaet_sleep_minuten",
+                v.coerceIn(de.frank.jarvis.mentalitaet.MIN_SLEEP_MINUTEN, de.frank.jarvis.mentalitaet.MAX_SLEEP_MINUTEN),
+            )
+        }
     /** Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle, zum Beispiel „handy,mac,windows“. */
     var ablageQuellen: String get() = s("ablage_quellen", "handy,mac,windows"); set(v) = put { putString("ablage_quellen", v) }
     /** Prompts nach Quelle sortiert statt in der eigenen, gezogenen Reihenfolge. */

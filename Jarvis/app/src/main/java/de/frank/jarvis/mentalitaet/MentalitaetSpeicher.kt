@@ -23,6 +23,11 @@ const val MIN_PAUSE_SEKUNDEN = 3
 const val MAX_PAUSE_SEKUNDEN = 30
 const val STANDARD_PAUSE_SEKUNDEN = 5
 
+/** Sleep-Timer der Vorleseschleife: Dauer in Minuten ab Vorlesestart. */
+const val MIN_SLEEP_MINUTEN = 1
+const val MAX_SLEEP_MINUTEN = 120
+const val STANDARD_SLEEP_MINUTEN = 30
+
 /**
  * Parst eine Sprach- oder Textangabe für die Pause zwischen Sätzen (3 bis 30 Sekunden).
  * Akzeptiert ganze Zahlen mit optionaler Einheit („10“, „10 s“, „10 Sekunden“), „standard“/„zurücksetzen“ sowie „minimal“/„maximal“.

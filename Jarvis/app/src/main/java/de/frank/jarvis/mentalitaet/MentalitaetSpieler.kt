@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import de.frank.jarvis.atem.AtemSitzung
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.settings.SecureSettings
@@ -403,6 +404,7 @@ object MentalitaetSpieler {
     private const val PAUSEN_TAKT_MS = 200L
     private const val FOKUS_PRUEF_MS = 150L
     private const val WACH_MS = 5 * 60_000L
+    private const val SLEEP_TAKT_MS = 1_000L
 
     /** Schützt einen MediaPlayer vor doppeltem Freigeben bei gleichzeitigem Stopp und Abschluss. */
     private class AktiverSpieler(val mp: MediaPlayer) {
@@ -427,6 +429,12 @@ object MentalitaetSpieler {
     val aktiv: Boolean get() = _stand.value.laeuft
 
     private var job: Job? = null
+    /** Wacht über den Sleep-Timer der laufenden Session (eigener Takt, unabhängig von Pause und Tonfokus). */
+    private var sleepJob: Job? = null
+
+    /** Vorlesestart der laufenden Session (elapsedRealtime, zählt auch im Tiefschlaf); null = keine Session. */
+    private val _startZeit = MutableStateFlow<Long?>(null)
+    val startZeit: StateFlow<Long?> = _startZeit.asStateFlow()
     private var appContext: Context? = null
     @Volatile private var syntheseInstanz: Synthese? = null
     private var aktiverSpieler: AktiverSpieler? = null
@@ -503,7 +511,14 @@ object MentalitaetSpieler {
         VorleseDienst.aktualisiere(app, "Mentalität", 1, plan.size, pausiert = false)
         wachErneuern(app)
         val syn = synthese(app)
-        Logbuch.sprache("Mentalität gestartet", "schritte=${plan.size}, pause=${aktuellePauseSekunden}s")
+        Logbuch.sprache(
+            "Mentalität gestartet",
+            "schritte=${plan.size}, pause=${aktuellePauseSekunden}s, sleep=" +
+                if (einstellungen.mentalitaetSleepTimer) "${einstellungen.mentalitaetSleepMinuten}min" else "aus",
+        )
+        val startMs = SystemClock.elapsedRealtime()
+        _startZeit.value = startMs
+        sleepJob = bereich.launch { sleepWachen(app, startMs, meinLauf) }
 
         var planQuelle: List<MentalSatz>? = null
         var planCache: List<MentalSchritt> = plan
@@ -596,6 +611,9 @@ object MentalitaetSpieler {
                 }
             } finally {
                 if (laufNummer.get() == meinLauf) {
+                    sleepJob?.cancel()
+                    sleepJob = null
+                    _startZeit.value = null
                     spielerBeenden()
                     fokusAbgeben()
                     wachLos()
@@ -638,6 +656,12 @@ object MentalitaetSpieler {
         if (Looper.myLooper() != Looper.getMainLooper()) { haupt.post { fortsetzen() }; return }
         if (!aktiv || !manuellPausiert.value) return
         val app = appContext
+        // Ist der Sleep-Timer in der Pause abgelaufen, endet die Session statt kurz weiterzulaufen.
+        if (app != null && sleepAbgelaufen(app)) {
+            Logbuch.sprache("Mentalität: Sleep-Timer abgelaufen", "beim Weiter")
+            stoppIntern(fehler = null, dienstBeenden = true)
+            return
+        }
         // Läuft eine Aufnahme oder ein Gespräch, spräche die Mentalität ins Mikrofon: erst danach weiter.
         if (runCatching { mikrofonBelegt() }.getOrDefault(false)) {
             _stand.value = _stand.value.copy(fehler = "Erst die Aufnahme beenden, dann geht es weiter.")
@@ -705,6 +729,9 @@ object MentalitaetSpieler {
         laufNummer.incrementAndGet()
         job?.cancel()
         job = null
+        sleepJob?.cancel()
+        sleepJob = null
+        _startZeit.value = null
         pausiertDurchFokus = false
         manuellPausiert.value = false
         internetProbleme = false
@@ -714,6 +741,35 @@ object MentalitaetSpieler {
         _stand.value = MentalSpielStand(fehler = fehler)
         if (dienstBeenden && warAktiv) {
             appContext?.let { dienstBeendenWennFrei(it) }
+        }
+    }
+
+    /** Restzeit des Sleep-Timers in ms ab [startMs]; null = Timer aus. Liest Schalter und Dauer live. */
+    private fun sleepRestMs(app: Context, startMs: Long): Long? {
+        val e = Einstellungen.get(app)
+        if (!e.mentalitaetSleepTimer) return null
+        return startMs + e.mentalitaetSleepMinuten * 60_000L - SystemClock.elapsedRealtime()
+    }
+
+    private fun sleepAbgelaufen(app: Context): Boolean {
+        val start = _startZeit.value ?: return false
+        return (sleepRestMs(app, start) ?: return false) <= 0L
+    }
+
+    /**
+     * Sleep-Timer: beendet die Session nach der eingestellten Dauer ab Vorlesestart, still (ohne Ton, ohne Fehlermeldung).
+     * Prüft im Sekundentakt gegen die Echtzeit (elapsedRealtime), damit auch ein Tiefschlaf in einer Pause mitzählt;
+     * Schalter und Dauer gelten live, auch für eine laufende Session.
+     */
+    private suspend fun sleepWachen(app: Context, startMs: Long, meinLauf: Long) {
+        while (laufNummer.get() == meinLauf) {
+            val rest = sleepRestMs(app, startMs)
+            if (rest != null && rest <= 0L) {
+                Logbuch.sprache("Mentalität: Sleep-Timer abgelaufen", "nach ${(SystemClock.elapsedRealtime() - startMs) / 60_000L} min")
+                stoppIntern(fehler = null, dienstBeenden = true)
+                return
+            }
+            delay(minOf(rest ?: SLEEP_TAKT_MS, SLEEP_TAKT_MS).coerceAtLeast(50L))
         }
     }
 
