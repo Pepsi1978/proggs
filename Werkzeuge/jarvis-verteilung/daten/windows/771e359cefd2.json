@@ -1,0 +1,13 @@
+{
+ "quelle": "771e359cefd29e66e62b3abac64e56f6091bb805",
+ "plattform": "windows",
+ "titel": "Jarvis: Rückfrage-Antwort nie doppelt, Tippsperre auch beim Nachrücken, Feld-Mitschrift überlebt Sessionwechsel (1.8.952)",
+ "quellen": [
+  "mobil"
+ ],
+ "status": "in_arbeit",
+ "host": "Power-PC",
+ "ziel": "power",
+ "zeit": "2026-11-25T11:19:47+01:00",
+ "versuch": 1
+}
