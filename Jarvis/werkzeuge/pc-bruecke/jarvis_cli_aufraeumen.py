@@ -411,28 +411,39 @@ def sammle(pid: int, liste: dict[int, dict], vorher: dict[int, float] | None, na
 
 
 def unter_cli(pid: int, liste: dict[int, dict]) -> bool:
-    """Läuft der Prozess irgendwo unterhalb einer CLI (Hilfsprozess oder per Werkzeug gestartete CLI)? Dann zählt nur die äußere
-    Sitzung, jede offene Sitzung also genau einmal."""
+    """Läuft die Sitzung irgendwo unterhalb einer anderen offenen Terminal-Sitzung (per Werkzeug gestartete CLI)? Dann zählt auf der
+    Karte nur die äußere, jede offene Sitzung also genau einmal. Nur fürs Zählen, das Aufräumen behandelt sie wie bisher."""
     gesehen, p = {pid}, liste.get(pid, {}).get("ppid")
     while p in liste and p not in gesehen:
-        if cli_name(liste[p]["befehl"]):
+        if cli_name(liste[p]["befehl"]) and liste[p]["tty"] not in ("??", ""):
             return True
         gesehen.add(p)
         p = liste[p]["ppid"]
     return False
 
 
+def kandidaten(liste: dict[int, dict]) -> list[int]:
+    """CLI-Prozesse mit Terminal, deren direkter Elternprozess keine CLI ist (Hilfsprozesse einer CLI fallen weg)."""
+    return [p for p, d in liste.items()
+            if cli_name(d["befehl"]) and d["tty"] not in ("??", "") and not cli_name(liste.get(d["ppid"], {}).get("befehl", ""))]
+
+
+def zaehlbar(liste: dict[int, dict]) -> frozenset[int]:
+    """Billige Erkennung ohne Bewertung: die PIDs der Sitzungen, die die Karte zählt."""
+    return frozenset(p for p in kandidaten(liste) if not unter_cli(p, liste))
+
+
 def sitzungen(ohne: int | None = None) -> list[dict]:
-    """Alle offenen interaktiven CLI-Sitzungen mit Zustand, älteste Aktivität zuerst. [ohne] = eigene Sitzung (nie schließen)."""
+    """Alle offenen interaktiven CLI-Sitzungen mit Zustand, älteste Aktivität zuerst. [ohne] = eigene Sitzung (nie schließen).
+    „verschachtelt“ = läuft unter einer anderen Sitzung: zählt nicht auf der Karte, wird aber wie bisher bewertet und aufgeräumt."""
     vorher_liste = prozesse()
-    kandidaten = [p for p, d in vorher_liste.items()
-                  if cli_name(d["befehl"]) and d["tty"] not in ("??", "") and not unter_cli(p, vorher_liste)]
+    pids = kandidaten(vorher_liste)
     vorher = {p: d["cpu"] for p, d in vorher_liste.items()}
     time.sleep(MESSPAUSE_S)
     nachher = prozesse()
     jetzt = time.time()
     ergebnis = []
-    for pid in kandidaten:
+    for pid in pids:
         if pid not in nachher or pid == ohne:
             continue
         try:
@@ -441,6 +452,7 @@ def sitzungen(ohne: int | None = None) -> list[dict]:
         except Exception as fehler:
             s = {"pid": pid, "name": cli_name(nachher[pid]["befehl"]) or "CLI", "zustand": "unklar",
                  "grund": f"nicht lesbar ({type(fehler).__name__})"}
+        s["verschachtelt"] = unter_cli(pid, nachher)
         ergebnis.append(s)
     ergebnis.sort(key=lambda s: s.get("letzte") or jetzt)
     return ergebnis
@@ -613,12 +625,13 @@ def aufraeumen(art: str, ohne: int | None = None, trocken: bool = False) -> dict
                 s["zustand"] = "unklar"
                 fehlgeschlagen.append(s)
         jetzt = time.time()
-        offen = [x for x in alle if x["zustand"] not in ("beendet", "weg")]
+        # Für die Karte zählt jede Sitzung genau einmal: unter einer anderen gestartete fallen aus Liste und Zählung.
+        offen = [x for x in alle if x["zustand"] not in ("beendet", "weg") and not x.get("verschachtelt")]
         zaehl = {z: sum(1 for x in offen if x["zustand"] == z) for z in ("aktiv", "wartet", "kuerzlich", "unklar", "inaktiv")}
         teile = [f"{n} {name}" for name, n in (("aktiv", zaehl["aktiv"]), ("warten auf Antwort", zaehl["wartet"]),
                                                ("kürzlich genutzt", zaehl["kuerzlich"]), ("unklar", zaehl["unklar"]),
                                                ("würden beendet (Probelauf)" if trocken else "inaktiv", zaehl["inaktiv"])) if n]
-        text = (f"{len(beendet)} von {len(alle)} Sitzungen beendet" if beendet else f"Keine Sitzung beendet ({len(alle)} offen)")
+        text = (f"{len(beendet)} von {len(beendet) + len(offen)} Sitzungen beendet" if beendet else f"Keine Sitzung beendet ({len(offen)} offen)")
         if offen:
             text += ". Offen: " + (", ".join(teile) if teile else f"{len(offen)}")
         if fehlgeschlagen:

@@ -843,11 +843,12 @@ def cli_befehl(kennung: str, art: str, befehl: dict) -> None:
 
 
 def cli_faden() -> None:
-    """Geplantes Aufräumen nur bei eingeschalteter Automatik (nach Ruhezustand höchstens ein nachgeholter Lauf), dazu jede
-    Minute die Liste der offenen Sitzungen für die Karte: gemeldet sofort bei einer Änderung, sonst alle fünf Minuten."""
+    """Geplantes Aufräumen nur bei eingeschalteter Automatik (nach Ruhezustand höchstens ein nachgeholter Lauf), dazu die Liste der
+    offenen Sitzungen für die Karte: jede Minute eine billige Prozessprüfung, die volle Bewertung und Meldung sofort, wenn sich
+    die Menge der Sitzungen ändert, sonst alle fünf Minuten."""
     import jarvis_cli_aufraeumen as ca
     liste_zeit = 0.0
-    gemeldet, gemeldet_zeit = None, 0.0
+    letzte_pids = None
     while True:
         try:
             with UZ_SPERRE:
@@ -856,18 +857,18 @@ def cli_faden() -> None:
                     CLI_STAND["laeuft"] = True
             if los:
                 cli_lauf("auto")
-                liste_zeit = time.time()
-            elif not CLI_STAND["laeuft"] and time.time() - liste_zeit >= 55:
-                liste_zeit = time.time()
-                nr = CLI_STAND["laeufe"]
-                liste = [ca.kurz(x) for x in ca.sitzungen()]
-                # Hat inzwischen ein Aufräumen begonnen, ist diese Messung älter als sein Ergebnis: verwerfen.
-                if CLI_STAND["laeufe"] == nr and not CLI_STAND["laeuft"]:
-                    CLI_STAND["sitzungen"] = liste
-                    vergleich = [(x.get("name"), x.get("cli"), x.get("zustand")) for x in liste]
-                    if vergleich != gemeldet or time.time() - gemeldet_zeit >= 300:
+                liste_zeit, letzte_pids = time.time(), None
+            elif not CLI_STAND["laeuft"]:
+                pids = ca.zaehlbar(ca.prozesse())
+                if pids != letzte_pids or time.time() - liste_zeit >= 300:
+                    liste_zeit = time.time()
+                    nr = CLI_STAND["laeufe"]
+                    liste = [ca.kurz(x) for x in ca.sitzungen() if not x.get("verschachtelt")]
+                    # Hat inzwischen ein Aufräumen begonnen, ist diese Messung älter als sein Ergebnis: verwerfen.
+                    if CLI_STAND["laeufe"] == nr and not CLI_STAND["laeuft"]:
+                        CLI_STAND["sitzungen"] = liste
                         if cli_melden():
-                            gemeldet, gemeldet_zeit = vergleich, time.time()
+                            letzte_pids = pids
         except Exception as fehler:
             schreib(f"CLI-Aufräumen (Zeitplan): {type(fehler).__name__}: {fehler}")
         time.sleep(60)
