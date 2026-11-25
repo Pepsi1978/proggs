@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Mentalität-Vorleseschleife samt Vorlese-Benachrichtigung existiert nur auf Android, JarvisWindows hat keine Mentalität",
+ "review": "",
+ "tests": "",
  "host": "Power-PC",
- "ziel": "power",
- "zeit": "2026-11-25T11:24:33+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T11:25:18+01:00"
 }
