@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Nur Anzeige (nurKlick-Zählung und Hinweis) der Mac-Update-Zentrale-Karte in der Android-App; JarvisMac hat diese Karte nicht, die Updater-Zentrale macOS wurde im Commit selbst schon geändert",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-25T10:53:29+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T10:53:53+01:00"
 }
