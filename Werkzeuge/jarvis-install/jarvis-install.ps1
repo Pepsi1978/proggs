@@ -95,7 +95,7 @@ function Nimm-Sperre {
         if ([DateTimeOffset]::Now.ToUnixTimeSeconds() -ge $bis) { Ende fehler "Eine andere Jarvis-Installation blockiert das Handy" }
         if (-not $gemeldet) { "Eine andere Jarvis-Installation läuft, warte ..." | Write-Host; $gemeldet = $true }
         Start-Sleep -Seconds 3
-        if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
+        if (-not (Verbinde)) { Ende fehler "Gerät ($Ziel) nicht erreichbar" }
     }
     $script:sperreMein = $true
     Handy "echo '$($env:COMPUTERNAME) $PID' > $sperre/eigner" | Out-Null
@@ -103,7 +103,7 @@ function Nimm-Sperre {
     Handy rm -f "/data/local/tmp/jarvis-install*.apk" | Out-Null
 }
 function Installiere {
-    if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
+    if (-not (Verbinde)) { Ende fehler "Gerät ($Ziel) nicht erreichbar" }
     # Nach einem Verbindungsabriss kann die Adresse wechseln (WLAN, Tunnel); die Sitzung gilt aber nur auf diesem Handy.
     if ((Handy getprop ro.serialno) -ne $script:serie) { Ende fehler "anderes Gerät verbunden, Sitzung gehört zu $script:serie" }
     $ausgabe = Handy pm install-commit $script:sitzung
@@ -126,7 +126,7 @@ if ($Geraet -and $zielSerie -and (& $adb -s $Geraet get-state 2>$null) -eq "devi
 }
 
 try {
-    if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
+    if (-not (Verbinde)) { Ende fehler "Gerät ($Ziel) nicht erreichbar" }
     $serie = Handy getprop ro.serialno
     Nimm-Sperre
 

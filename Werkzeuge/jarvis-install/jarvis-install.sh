@@ -120,7 +120,7 @@ nimm_sperre() {
     [ "$(date +%s)" -ge "$bis" ] && ende fehler "Eine andere Jarvis-Installation blockiert das Handy"
     [ -z "${SPERRE_GEMELDET:-}" ] && { echo "Eine andere Jarvis-Installation läuft, warte ..."; SPERRE_GEMELDET=1; }
     sleep 3
-    verbinde || ende fehler "Handy nicht erreichbar"
+    verbinde || ende fehler "Gerät ($ZIEL) nicht erreichbar"
   done
   SPERRE_MEIN=1
   handy "echo '$(hostname) $$' > $SPERRE/eigner" >/dev/null
@@ -182,7 +182,7 @@ echo "Lade die APK vorab aufs Handy über $GERAET ..."
   fi
 }
 installiere() {
-  verbinde || ende fehler "Handy nicht erreichbar"
+  verbinde || ende fehler "Gerät ($ZIEL) nicht erreichbar"
   # Nach einem Verbindungsabriss kann die Adresse wechseln (WLAN, Tunnel); die Sitzung gilt aber nur auf diesem Handy.
   [ "$(handy getprop ro.serialno)" = "$SERIE" ] || ende fehler "anderes Gerät verbunden, Sitzung gehört zu $SERIE"
   local ausgabe
@@ -203,7 +203,7 @@ installiere() {
 if [ -n "$GERAET" ] && [ -n "$ZIEL_SERIE" ] && [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" = device ] && ! ist_ziel "$GERAET"; then
   ende fehler "Die Adresse $GERAET gehört laut geraete.json nicht zum Ziel '$ZIEL'. Das gemeinte Gerät mit --ziel handy oder --ziel tablet nennen."
 fi
-verbinde || ende fehler "Handy nicht erreichbar"
+verbinde || ende fehler "Gerät ($ZIEL) nicht erreichbar"
 SERIE=$(handy getprop ro.serialno)
 nimm_sperre
 bereite_vor
