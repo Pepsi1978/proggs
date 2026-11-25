@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Nachtragsstand und Auftragsbuch fuehrt nur das Handy (ProgrammierFaehigkeit); JarvisWindows zeigt den Stand nur ueber das Handy-Werkzeug programmierauftraege und hat keine eigenen Statustexte; die PC-Seite (jarvis_agy_hook.py, jarvis_anhaenge.py) ist im Commit selbst schon geteilt",
+ "review": "",
+ "tests": "",
  "host": "Power-PC",
- "ziel": "power",
- "zeit": "2026-11-25T11:19:47+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T11:23:07+01:00"
 }
