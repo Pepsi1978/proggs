@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "JarvisMac hat keine Mentalität-Vorleseschleife; der Fix betrifft nur deren Pause-Verhalten (Android-Tonfokus, Vorlese-Dienst)",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-25T10:31:49+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T10:34:04+01:00"
 }
