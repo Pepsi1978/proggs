@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Doppelsende-Schutz und Tippsperre gehören zum Android-Rückfrage-Vollbild; die Mitschrift-Rettung beim Sessionwechsel braucht die Android-Mitnahme je Session. JarvisWindows hat ein globales Eingabefeld, ein Diktat landet dort auch nach Verlassen der Ansicht",
+ "review": "",
+ "tests": "",
  "host": "Power-PC",
- "ziel": "power",
- "zeit": "2026-11-25T11:19:47+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T11:23:41+01:00"
 }
