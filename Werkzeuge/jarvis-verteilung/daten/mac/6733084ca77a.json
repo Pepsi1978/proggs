@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Review-Fixes am Android-Mentalitätsspieler, Vorlesedienst und Mikrofon-Sperre; Mentalität gibt es in JarvisMac nicht",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-25T10:43:56+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T10:44:27+01:00"
 }
