@@ -365,7 +365,7 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "akzent": "#007808",
-      "hinweis": "Ein Wechsel der Hauptversion (z. B. 8 → 9) ist auf der Karte markiert und läuft mit den Sammelknöpfen mit."
+      "hinweis": "Ein Wechsel der Hauptversion (z. B. 8 → 9) läuft wie jedes Update mit den Sammelknöpfen mit."
     },
     {
       "id": "rclone",

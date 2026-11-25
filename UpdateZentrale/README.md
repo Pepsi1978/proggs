@@ -60,8 +60,8 @@ Die Fußzeile zeigt den Gesamtstand vollständig und darunter je laufendem Updat
 erwarteter Dauer.
 
 Innerhalb jeder Phase geht das kürzeste erwartete Update zuerst, die großen Installer (Visual Studio, Android Studio, Docker)
-also ans Ende. `zuletzt` (App Installer = winget selbst) steht immer ganz hinten; `hauptversionNurPerKlick` (TypeScript, npm,
-FFmpeg) bleibt bei einem Sprung der Hauptversion ganz draußen und läuft nur per Klick auf der Karte.
+also ans Ende. `zuletzt` (App Installer = winget selbst) steht immer ganz hinten. Ein Sprung der Hauptversion läuft wie jedes andere
+Update mit (seit 1.3.95); die Frage vor dem Sammellauf markiert ihn als „neue Hauptversion“.
 
 ### Protokolle und Verifikation
 
@@ -204,7 +204,7 @@ Weitere optionale Felder:
 | `pruefAbschnitt` | Nur `cli`: erst Zeilen nach der ersten Zeile mit diesem Text zählen (sdkmanager: `Available Updates`). Fehlt der Abschnitt, ist nichts offen. |
 | `pruefZeilenMuster` | Nur `cli`: regulärer Ausdruck für eine geplante Update-Zeile statt des Pfeils – für Werkzeuge mit Tabellenausgabe. |
 | `uebernahmeText` | Text des Bandes „wird übernommen" statt des Standards „nach dem Neustart des Programms" (OpenCode-Sitzung). |
-| `hauptversionNurPerKlick` | Ein Sprung der ersten Versionsstelle bleibt aus „Alle Updates installieren" draußen und läuft nur per Klick. |
+| `hauptversionNurPerKlick` | Veraltet, ohne Wirkung (seit 1.3.95): Hauptversionssprünge laufen mit den Sammelknöpfen mit. |
 | `dauerSchaetzungSekunden` | Erwartete Update-Dauer, bis echte Messungen vorliegen (sonst ein Viertel von `zeitlimitMinuten`). |
 | `zuletzt` | Immer das letzte Update eines Sammellaufs, nach allen Phasen (App Installer: ersetzt winget). |
 | `parallel` | Darf im Sammellauf in der parallelen Bahn laufen. Nur für Selbst-Updater, die nichts mit einem anderen Eintrag teilen (Claude Code, Codex, Antigravity, rustup, OpenCode-Sitzung); bewusst kein Raten aus der Befehlszeile. |

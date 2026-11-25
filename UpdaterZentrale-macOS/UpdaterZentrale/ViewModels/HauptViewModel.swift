@@ -232,6 +232,16 @@ final class HauptViewModel {
         }.joined(separator: "\n")
     }
 
+    /// Die gefundenen Updates mit Namen fuer die Kopfzeile, getrennt wie die beiden Knoepfe.
+    var updateNamen: String {
+        let plaene = plaeneBerechnen()
+        func namen(_ l: [Sammelplan.Schritt]) -> String {
+            l.map { $0.programm.name + ($0.programm.istHauptversionsSprung ? " (neue Hauptversion)" : "") }.joined(separator: ", ")
+        }
+        return (plaene.cli.isEmpty ? "" : "  ·  Kritische Updates: " + namen(plaene.cli))
+            + (plaene.sicher.isEmpty ? "" : "  ·  Weitere: " + namen(plaene.sicher))
+    }
+
     var hatSichereUpdates: Bool { !plaeneBerechnen().sicher.isEmpty }
     var hatCliUpdates: Bool { !plaeneBerechnen().cli.isEmpty }
 
@@ -445,7 +455,7 @@ final class HauptViewModel {
             }
         }
 
-        kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "."
+        kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "." + updateNamen
                    + (repoHinweis.map { "  ·  " + $0 } ?? "")
         pruefungEnde = Date()
     }

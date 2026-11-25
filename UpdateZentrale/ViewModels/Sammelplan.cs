@@ -13,8 +13,8 @@ namespace UpdateZentrale.ViewModels;
 /// </list>
 /// Within a phase an entry whose prerequisites ("nach") are in the same run goes after them;
 /// otherwise the shortest expected update goes first, so the long installers (Visual Studio,
-/// Android Studio, Docker) do not hold the quick ones back. Major version jumps marked
-/// "hauptversionNurPerKlick" are left out entirely.
+/// Android Studio, Docker) do not hold the quick ones back. Every open update is planned, a major
+/// version jump included -- the collective buttons install everything they show.
 /// </summary>
 public static class Sammelplan
 {

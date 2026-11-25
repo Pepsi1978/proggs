@@ -50,7 +50,7 @@ Gleiche Logik wie die Windows-Fassung (1.3.31–1.3.40):
 
 Innerhalb jeder Phase geht das kürzeste erwartete Update zuerst; `nach` zieht Voraussetzungen davor
 (npm-Werkzeuge nach Node.js, Gradle/Kotlin/Android SDK nach dem JDK).
-`hauptversionNurPerKlick` (TypeScript, npm, FFmpeg) bleibt bei einem Hauptversionssprung draußen.
+Ein Hauptversionssprung läuft wie jedes andere Update mit (seit 1.0.59) und ist in Frage, Tooltip und Kopfzeile markiert.
 Die Fußzeile zeigt den Gesamtstand und je laufendem Update Position, Phase, Startzeit und erwartete Dauer.
 
 ### Protokolle und Verifikation
@@ -157,7 +157,7 @@ Weitere optionale Felder:
 | `vorhandenPfad` | Merkmal „vorhanden“ ohne startbare Programmdatei (Homebrew-Formeln: `/opt/homebrew/bin/fd`, OpenCode: `current.json`) – für `ausblendenWennFehlt` |
 | `cliRisiko` | Grund, warum dieses Update laufende CLI-Sitzungen beenden kann. Die Karte zeigt ⚠ neben dem Namen (Grund im Tooltip), der Einzelknopf fragt nach, und das Update läuft nur über „⚠ CLI-kritische Updates installieren“. |
 | `uebernahmeText` | Text des Bandes „wird übernommen“ statt des Standards |
-| `hauptversionNurPerKlick` | Ein Sprung der ersten Versionsstelle bleibt aus den Sammelknöpfen draußen und läuft nur per Klick |
+| `hauptversionNurPerKlick` | Veraltet, ohne Wirkung (seit 1.0.59): Hauptversionssprünge laufen mit den Sammelknöpfen mit |
 | `dauerSchaetzungSekunden` | Erwartete Update-Dauer, bis echte Messungen vorliegen (sonst ein Viertel von `zeitlimitMinuten`) |
 | `zuletzt` | Immer das letzte Update eines Sammellaufs, nach allen Phasen |
 | `parallel` | Darf im Sammellauf in der parallelen Bahn laufen (nur `cli` und `opencodesitzung`, nie mit `cliRisiko`) |
