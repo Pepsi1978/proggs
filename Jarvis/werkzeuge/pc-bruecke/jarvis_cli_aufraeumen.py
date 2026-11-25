@@ -7,7 +7,7 @@ Kandidat ist eine Sitzung nur, wenn ALLES eindeutig feststeht (sonst gilt „off
 - letzte tatsächliche Aktivität (Register, Transkript, Jarvis-Hook) mehr als eine Stunde her,
 - kein laufendes Werkzeug (Shell-Kindprozess) und kaum CPU im ganzen Prozessbaum,
 - keine offene Rückfrage an Frank (Jarvis-Hook-Zustand), ein Jarvis-Auftrag ist mit „fertig“ oder „fehler“ abgeschlossen.
-Andere CLIs (Codex, OpenCode, Kimi, Antigravity) haben kein Statusregister: nicht bestimmbar, bleiben offen.
+Andere CLIs (Codex, OpenCode, Kimi, Antigravity als „agy“) werden gezählt, haben aber kein Statusregister: nicht bestimmbar, bleiben offen.
 
 Schließen: älteste zuerst, unmittelbar vorher die volle Prüfung noch einmal, dann SIGTERM (nach 20 s SIGKILL) nur an den
 CLI-Prozess, danach SIGHUP an die Shells seines Terminal-Reiters, damit Terminal den Reiter schließt. Erst wenn der Prozess nachweislich weg ist, gilt die Sitzung als beendet; ihr Registereintrag (die Liste der
@@ -33,6 +33,8 @@ INAKTIV_S = 3600            # mehr als eine Stunde ohne Aktivität (fest, unabh�
 CPU_GRENZE_S = 0.5          # so viel CPU-Zeit darf der Prozessbaum in der Messpause höchstens verbrauchen
 MESSPAUSE_S = 2.0
 CLIS = ("claude", "codex", "opencode", "kimi", "gemini", "antigravity")
+# Programmnamen, unter denen eine CLI tatsächlich läuft, wenn er vom CLI-Namen abweicht (Antigravity startet als „agy“).
+CLI_ALIASE = {"agy": "antigravity"}
 WARTENDE_FRAGEN = ("am_pc", "jarvis", "warter", "tippt")
 EINSTELLUNG = Path.home() / "Library" / "Application Support" / "JarvisPcBruecke" / "cli-aufraeumen.json"
 SPERRE = threading.Lock()
@@ -120,8 +122,12 @@ def cli_name(befehl: str) -> str | None:
     erstes = os.path.basename(teile[0])
     if erstes in CLIS:
         return erstes
+    if erstes in CLI_ALIASE:
+        return CLI_ALIASE[erstes]
     if erstes in ("node", "bun") and len(teile) > 1:
         zweites = os.path.basename(teile[1])
+        if zweites in CLI_ALIASE:
+            return CLI_ALIASE[zweites]
         for c in CLIS:
             if zweites == c or zweites.startswith(c + ".") or f"/{c}/" in teile[1] or f"@openai/{c}" in teile[1]:
                 return c
@@ -404,11 +410,23 @@ def sammle(pid: int, liste: dict[int, dict], vorher: dict[int, float] | None, na
     return s
 
 
+def unter_cli(pid: int, liste: dict[int, dict]) -> bool:
+    """Läuft der Prozess irgendwo unterhalb einer CLI (Hilfsprozess oder per Werkzeug gestartete CLI)? Dann zählt nur die äußere
+    Sitzung, jede offene Sitzung also genau einmal."""
+    gesehen, p = {pid}, liste.get(pid, {}).get("ppid")
+    while p in liste and p not in gesehen:
+        if cli_name(liste[p]["befehl"]):
+            return True
+        gesehen.add(p)
+        p = liste[p]["ppid"]
+    return False
+
+
 def sitzungen(ohne: int | None = None) -> list[dict]:
     """Alle offenen interaktiven CLI-Sitzungen mit Zustand, älteste Aktivität zuerst. [ohne] = eigene Sitzung (nie schließen)."""
     vorher_liste = prozesse()
     kandidaten = [p for p, d in vorher_liste.items()
-                  if cli_name(d["befehl"]) and d["tty"] not in ("??", "") and not cli_name(vorher_liste.get(d["ppid"], {}).get("befehl", ""))]
+                  if cli_name(d["befehl"]) and d["tty"] not in ("??", "") and not unter_cli(p, vorher_liste)]
     vorher = {p: d["cpu"] for p, d in vorher_liste.items()}
     time.sleep(MESSPAUSE_S)
     nachher = prozesse()
