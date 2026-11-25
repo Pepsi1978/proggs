@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Sleep-Timer erweitert die Mentalität-Vorleseschleife; JarvisMac hat keine Mentalität-Funktion",
+ "review": "",
+ "tests": "",
  "host": "Mac.lan",
- "ziel": "mac",
- "zeit": "2026-11-25T22:32:13+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T22:32:41+01:00"
 }
