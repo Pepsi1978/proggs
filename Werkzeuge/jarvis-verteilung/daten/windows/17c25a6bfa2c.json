@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Mentalität-Vorleseschleife (MentalitaetSpieler, VorleseDienst mit Medien-Benachrichtigung) gibt es nur am Handy; JarvisWindows hat keine Mentalität-Funktion",
+ "review": "",
+ "tests": "",
  "host": "Power-PC",
- "ziel": "power",
- "zeit": "2026-11-25T11:19:47+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T11:24:22+01:00"
 }
