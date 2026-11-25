@@ -206,7 +206,13 @@ final class HauptViewModel {
     /// gehoert trotzdem zum CLI-Knopf.
     private func plaeneBerechnen() -> (sicher: [Sammelplan.Schritt], cli: [Sammelplan.Schritt]) {
         let alles = Sammelplan.planen(programme.filter(\.hatUpdate))
-        return (alles.filter { !$0.programm.eintrag.istCliKritisch }, alles.filter { $0.programm.eintrag.istCliKritisch })
+        // Wartet ein Update auf eine offene CLI-kritische Voraussetzung ("nach": npm nach Node.js), laeuft es mit ihr im
+        // CLI-Plan -- sonst kaeme etwa eine neue npm-Hauptversion vor dem passenden Node.js.
+        let cliIds = Set(alles.filter { $0.programm.eintrag.istCliKritisch }.map { $0.programm.eintrag.id.lowercased() })
+        func kritisch(_ s: Sammelplan.Schritt) -> Bool {
+            s.programm.eintrag.istCliKritisch || s.programm.eintrag.nach.contains { cliIds.contains($0.lowercased()) }
+        }
+        return (alles.filter { !kritisch($0) }, alles.filter(kritisch))
     }
 
     /// Beschriftung des Knopfs fuer alles, was nicht CLI-kritisch ist.
@@ -226,7 +232,9 @@ final class HauptViewModel {
     /// Namen hinter einem Knopf, fuer seinen Tooltip (mit Hinweis auf einen echten Hauptversionswechsel).
     func knopfListe(cli: Bool) -> String {
         let plaene = plaeneBerechnen()
-        return (cli ? plaene.cli : plaene.sicher).map { s in
+        let l = cli ? plaene.cli : plaene.sicher
+        guard !l.isEmpty else { return "" }
+        return "\n\n" + l.map { s in
             "• " + s.programm.name + "  " + s.programm.installierteVersion + " → " + s.programm.verfuegbareVersion
                 + (s.programm.istHauptversionsSprung ? "  (neue Hauptversion)" : "")
         }.joined(separator: "\n")
@@ -455,8 +463,8 @@ final class HauptViewModel {
             }
         }
 
-        kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "." + updateNamen
-                   + (repoHinweis.map { "  ·  " + $0 } ?? "")
+        kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "."
+                   + (repoHinweis.map { "  ·  " + $0 } ?? "") + updateNamen
         pruefungEnde = Date()
     }
 
@@ -502,7 +510,8 @@ final class HauptViewModel {
         }.joined(separator: "\n")
         let frage = cli
             ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
-              + plan.enumerated().map { i, s in "  \(i + 1). \(s.programm.name) – \(s.programm.eintrag.cliKritischGrund ?? "")" }
+              + plan.enumerated().map { i, s in "  \(i + 1). \(s.programm.name) – \(s.programm.eintrag.cliKritischGrund ?? "")"
+                  + (s.programm.istHauptversionsSprung ? "  (neue Hauptversion " + s.programm.verfuegbareVersion + ")" : "") }
                   .joined(separator: "\n")
               + "\n\nSchließe vorher Claude Code, Codex, OpenCode und alle Terminalfenster, dann „Ja“."
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
@@ -519,10 +528,11 @@ final class HauptViewModel {
 
     /// Warum ein Update im Sammellauf nicht bestaetigt installiert wurde, kurz und lesbar.
     nonisolated static func grund(_ b: UpdateBericht?) -> String {
-        guard let b else { return "kein Ergebnis – der Lauf brach vorher ab" }
+        guard let b else { return "nicht gelaufen – das Programm war beschäftigt oder das Update wurde nicht gestartet" }
         let erste = b.meldung.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             .first { !$0.isEmpty } ?? ""
-        let text = erste.isEmpty ? b.ergebnisText : b.ergebnisText + " – " + erste
+        let ersatz = b.ergebnis == .abgebrochen ? "abgebrochen oder am Mac abgelehnt" : b.ergebnisText
+        let text = erste.isEmpty ? ersatz : b.ergebnisText + " – " + erste
         return text.count > 160 ? String(text.prefix(159)) + "…" : text
     }
 
@@ -749,7 +759,7 @@ final class HauptViewModel {
             if phase == Sammelplan.phaseCli && !cliBestaetigt {
                 laufDetail = ""
                 let frage = "Jetzt kommen die CLI-kritischen Updates:\n\n"
-                    + schritte.map { "  • \($0.programm.name) – \($0.programm.eintrag.cliRisiko ?? "")" }.joined(separator: "\n")
+                    + schritte.map { "  • \($0.programm.name) – \($0.programm.eintrag.cliKritischGrund ?? "")" + ($0.programm.istHauptversionsSprung ? "  (neue Hauptversion " + $0.programm.verfuegbareVersion + ")" : "") }.joined(separator: "\n")
                     + "\n\nSchließe jetzt Claude Code, Codex, OpenCode und alle Terminalfenster und klicke dann auf „Ja“."
                     + "\n„Nein“ überspringt sie (sie bleiben offen); die übrigen Updates laufen weiter."
                 if !Dialoge.fragen(frage, "CLI-kritische Updates jetzt installieren?") {

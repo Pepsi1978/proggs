@@ -219,9 +219,9 @@ fun MacUpdateStartKarte(griff: Modifier = Modifier) {
     val kritisch = programme.filter { it.optBoolean("update") && it.optBoolean("kritisch") }
     val fehler = programme.filter { it.optBoolean("fehler") }
     val neustart = programme.filter { it.optBoolean("neustart") }.map { it.optString("name") }
-    // Jedes angezeigte Update gehört zu seinem Knopf, auch ein Hauptversionswechsel.
-    val installierbarU = unkritisch.size
-    val installierbarK = kritisch.size
+    // Jedes angezeigte Update gehört zu seinem Knopf, auch ein Hauptversionswechsel; nur eine Mac-Fassung vor 1.0.59 meldet noch „nurKlick“.
+    val installierbarU = unkritisch.count { !it.optBoolean("nurKlick") }
+    val installierbarK = kritisch.count { !it.optBoolean("nurKlick") }
     val bedienbar = l.macDa && !laeuft && sendet == null
     val freigabe = s?.optString("freigabe").orEmpty()
 
@@ -352,6 +352,7 @@ private fun Gruppe(titel: String, liste: List<JSONObject>, leer: String, mitGrun
             val zusatz = listOfNotNull(
                 if (p.optBoolean("laeuft")) p.optString("status") else null,
                 if (p.optBoolean("hauptversion")) "Neue Hauptversion" else null,
+                if (p.optBoolean("nurKlick")) "Hauptversion: Mac-App veraltet, dort per Klick" else null,
                 if (p.optBoolean("fehler")) p.optString("status") else null,
                 if (mitGrund) p.optString("grund").takeIf { it.isNotBlank() } else null,
             ).filter { it.isNotBlank() }

@@ -283,8 +283,13 @@ final class ProgrammViewModel {
         func haupt(_ v: String) -> String {
             String(v.drop(while: { "<> v".contains($0) }).prefix(while: { $0.isNumber }))
         }
+        // Nur "x.y…" mit kleiner Hauptzahl: Datums- und Buildnummern (2025.11.30, 20251101) sind kein Hauptversionswechsel.
+        func semver(_ v: String, _ h: String) -> Bool {
+            let rest = v.drop(while: { "<> v".contains($0) }).dropFirst(h.count)
+            return !h.isEmpty && h.count <= 3 && rest.first == "."
+        }
         let alt = haupt(installierteVersion), neu = haupt(verfuegbareVersion)
-        return !alt.isEmpty && !neu.isEmpty && alt != neu
+        return semver(installierteVersion, alt) && semver(verfuegbareVersion, neu) && alt != neu
     }
 
     /// Wird von der Fensterlogik gerufen, wenn sich die app-weite Sperre aendert.

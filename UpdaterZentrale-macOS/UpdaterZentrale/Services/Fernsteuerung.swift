@@ -185,7 +185,7 @@ final class Fernsteuerung {
                 case .abgebrochen, .fehlgeschlagen, .nichtVerifiziert: e["ok"] = false; e["text"] = HauptViewModel.grund(b)
                 }
             } else {
-                e["ok"] = false; e["text"] = "nicht gelaufen – der Lauf endete vorher"
+                e["ok"] = false; e["text"] = "nicht gelaufen – das Programm war beschäftigt oder das Update wurde nicht gestartet"
             }
             ergebnisse.append(e)
         }

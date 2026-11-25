@@ -800,9 +800,15 @@ public sealed partial class ProgrammViewModel : ObservableObject
         {
             if (!HatUpdate) return false;
             static string Haupt(string v) => new string(v.TrimStart('<', '>', ' ', 'v').TakeWhile(char.IsDigit).ToArray());
+            // Only "x.y…" with a small major: date or build numbers (2025.11.30, 20251101) are no major version change.
+            static bool Semver(string v, string h)
+            {
+                var rest = v.TrimStart('<', '>', ' ', 'v');
+                return h.Length is > 0 and <= 3 && rest.Length > h.Length && rest[h.Length] == '.';
+            }
             var alt = Haupt(InstallierteVersion);
             var neu = Haupt(VerfuegbareVersion);
-            return alt.Length > 0 && neu.Length > 0 && alt != neu;
+            return Semver(InstallierteVersion, alt) && Semver(VerfuegbareVersion, neu) && alt != neu;
         }
     }
 

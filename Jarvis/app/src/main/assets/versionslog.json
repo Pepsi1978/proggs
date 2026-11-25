@@ -978,6 +978,7 @@
     {"versionCode": 969, "versionName": "1.8.958", "stand": "25.11.2026, 10:28 Uhr", "notiz": "Eine pausierte Mentalität-Vorlesung bleibt erhalten, während du diktierst, Aufträge abschickst oder andere Jarvis-Funktionen nutzt, und läuft nach Weiter an derselben Stelle fort."},
     {"versionCode": 970, "versionName": "1.8.959", "stand": "25.11.2026, 10:37 Uhr", "notiz": "Die Mac-Zentrale installiert jetzt alle angezeigten Updates per Knopf, auch eine neue Hauptversion wie npm, und nennt bei einem Fehler Programm und Grund."},
     {"versionCode": 971, "versionName": "1.8.960", "stand": "25.11.2026, 10:39 Uhr", "notiz": "Die Mac-Zentrale zählt unter einer anderen Sitzung gestartete CLIs nicht doppelt, ohne das automatische Aufräumen zu verändern, und prüft jede Minute sparsam."},
-    {"versionCode": 972, "versionName": "1.8.961", "stand": "25.11.2026, 10:40 Uhr", "notiz": "Weiter in der Mentalität setzt erst nach einer laufenden Aufnahme fort und holt den Ton zuverlässig zurück, Stopp in der Benachrichtigung beendet nur das gerade laufende Vorlesen, und auch Hey Jarvis hält die Mentalität nur an."}
+    {"versionCode": 972, "versionName": "1.8.961", "stand": "25.11.2026, 10:40 Uhr", "notiz": "Weiter in der Mentalität setzt erst nach einer laufenden Aufnahme fort und holt den Ton zuverlässig zurück, Stopp in der Benachrichtigung beendet nur das gerade laufende Vorlesen, und auch Hey Jarvis hält die Mentalität nur an."},
+    {"versionCode": 973, "versionName": "1.8.962", "stand": "25.11.2026, 10:52 Uhr", "notiz": "Die Mac-Zentrale-Karte bleibt auch mit einer älteren Mac-App ehrlich: Knöpfe zählen nur, was dort wirklich installiert wird."}
 ]
 }

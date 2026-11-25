@@ -597,7 +597,11 @@ public sealed partial class HauptViewModel : ObservableObject
     private (List<Sammelplan.Schritt> Sicher, List<Sammelplan.Schritt> Cli) PlaeneBerechnen()
     {
         var alles = Sammelplan.Planen(Programme.Where(p => p.HatUpdate));
-        return (alles.Where(s => !s.Programm.KannCliBeenden).ToList(), alles.Where(s => s.Programm.KannCliBeenden).ToList());
+        // An update waiting for an open CLI-critical prerequisite ("nach": npm after Node.js) runs with it in the CLI plan --
+        // otherwise a new npm major version could land before the matching Node.js.
+        var cliIds = new HashSet<string>(alles.Where(s => s.Programm.KannCliBeenden).Select(s => s.Programm.Eintrag.Id), StringComparer.OrdinalIgnoreCase);
+        bool Kritisch(Sammelplan.Schritt s) => s.Programm.KannCliBeenden || s.Programm.Eintrag.Nach.Any(cliIds.Contains);
+        return (alles.Where(s => !Kritisch(s)).ToList(), alles.Where(Kritisch).ToList());
     }
 
     /// <summary>Kept for the labels: refreshed once per state change instead of once per property.</summary>
@@ -664,7 +668,7 @@ public sealed partial class HauptViewModel : ObservableObject
                                                            + (s.Programm.IstHauptversionsSprung ? "  – neue Hauptversion " + s.Programm.VerfuegbareVersion : "")));
         var frage = cli
             ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
-              + string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name} – {s.Programm.Eintrag.CliRisiko}"))
+              + string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name} – {s.Programm.Eintrag.CliRisiko}" + (s.Programm.IstHauptversionsSprung ? "  (neue Hauptversion " + s.Programm.VerfuegbareVersion + ")" : "")))
               + "\n\nSchließe vorher Claude Code, Codex, OpenCode und alle Terminalfenster, dann „Ja“."
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
             : "Reihenfolge der Updates (keines davon ist CLI-kritisch):\n\n" + liste
@@ -679,10 +683,13 @@ public sealed partial class HauptViewModel : ObservableObject
     /// <summary>Why an update of a collective run was not confirmed installed, short and readable.</summary>
     public static string Grund(UpdateBericht? b)
     {
-        if (b is null) return "kein Ergebnis – der Lauf brach vorher ab";
-        var erste = b.Meldung.Split('\n').Select(z => z.Trim()).FirstOrDefault(z => z.Length > 0) ?? "";
-        var text = erste.Length == 0 ? b.ErgebnisText : b.ErgebnisText + " – " + erste;
-        return text.Length > 160 ? text[..159] + "…" : text;
+        if (b is null) return "nicht gelaufen – das Programm war beschäftigt oder das Update wurde nicht gestartet";
+        var erste = (b.Meldung ?? "").Split('\n').Select(z => z.Trim()).FirstOrDefault(z => z.Length > 0) ?? "";
+        var ersatz = b.Ergebnis == LaufErgebnis.Abgebrochen ? "abgebrochen oder abgelehnt" : b.ErgebnisText;
+        var text = erste.Length == 0 ? ersatz : b.ErgebnisText + " – " + erste;
+        if (text.Length <= 160) return text;
+        var n = char.IsHighSurrogate(text[158]) ? 158 : 159;
+        return text[..n] + "…";
     }
 
     /// <summary>
@@ -908,7 +915,7 @@ public sealed partial class HauptViewModel : ObservableObject
                 {
                     LaufDetail = "";
                     var frage = "Jetzt kommen die CLI-kritischen Updates:\n\n"
-                                + string.Join("\n", schritte.Select(s => "  • " + s.Programm.Name + " – " + s.Programm.Eintrag.CliRisiko))
+                                + string.Join("\n", schritte.Select(s => "  • " + s.Programm.Name + " – " + s.Programm.Eintrag.CliRisiko + (s.Programm.IstHauptversionsSprung ? "  (neue Hauptversion " + s.Programm.VerfuegbareVersion + ")" : "")))
                                 + "\n\nSchließe jetzt Claude Code, Codex, OpenCode und alle Terminalfenster und klicke dann auf „Ja“."
                                 + "\n„Nein“ überspringt sie (sie bleiben offen); die übrigen Updates laufen weiter.";
                     if (!Dialoge.Fragen(frage, "CLI-kritische Updates jetzt installieren?"))
