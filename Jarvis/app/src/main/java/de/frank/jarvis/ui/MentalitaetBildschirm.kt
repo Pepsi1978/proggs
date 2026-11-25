@@ -60,6 +60,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -831,7 +833,9 @@ private fun SleepTimerBereich(
 ) {
     val f = LocalFarben.current
     val haptik = LocalHapticFeedback.current
-    val wert = minuten.coerceIn(MIN_SLEEP_MINUTEN, MAX_SLEEP_MINUTEN)
+    // Beim Ziehen nur lokal mitführen; gespeichert wird erst beim Loslassen (kein versehentliches Ende beim Überziehen).
+    var ziehWert by remember { mutableStateOf<Int?>(null) }
+    val wert = (ziehWert ?: minuten).coerceIn(MIN_SLEEP_MINUTEN, MAX_SLEEP_MINUTEN)
     val startZeit by MentalitaetSpieler.startZeit.collectAsState()
     // Restzeit der laufenden Session, alle 15 Sekunden nachgeführt.
     val restMinuten by produceState<Int?>(null, an, wert, startZeit) {
@@ -850,9 +854,11 @@ private fun SleepTimerBereich(
             .fillMaxWidth()
             .padding(top = 4.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clickable { haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove); beiAn(!an) }
-            .padding(vertical = 6.dp)
-            .semantics { contentDescription = "Sleep-Timer ${if (an) "an" else "aus"}" },
+            .toggleable(value = an, role = Role.Switch) {
+                haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                beiAn(it)
+            }
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
@@ -871,7 +877,7 @@ private fun SleepTimerBereich(
         }
         Switch(
             checked = an,
-            onCheckedChange = { haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove); beiAn(it) },
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = MENTAL_AKZENT,
@@ -910,8 +916,12 @@ private fun SleepTimerBereich(
             val neu = it.roundToInt().coerceIn(MIN_SLEEP_MINUTEN, MAX_SLEEP_MINUTEN)
             if (neu != wert) {
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                beiMinuten(neu)
+                ziehWert = neu
             }
+        },
+        onValueChangeFinished = {
+            ziehWert?.let(beiMinuten)
+            ziehWert = null
         },
         valueRange = MIN_SLEEP_MINUTEN.toFloat()..MAX_SLEEP_MINUTEN.toFloat(),
         steps = MAX_SLEEP_MINUTEN - MIN_SLEEP_MINUTEN - 1,

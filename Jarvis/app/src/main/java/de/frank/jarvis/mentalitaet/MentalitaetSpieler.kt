@@ -1,6 +1,11 @@
 package de.frank.jarvis.mentalitaet
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
@@ -405,6 +410,8 @@ object MentalitaetSpieler {
     private const val FOKUS_PRUEF_MS = 150L
     private const val WACH_MS = 5 * 60_000L
     private const val SLEEP_TAKT_MS = 1_000L
+    private const val SLEEP_TAKT_AUS_MS = 5_000L
+    private const val SLEEP_AKTION = "de.frank.jarvis.MENTALITAET_SLEEP_ENDE"
 
     /** Schützt einen MediaPlayer vor doppeltem Freigeben bei gleichzeitigem Stopp und Abschluss. */
     private class AktiverSpieler(val mp: MediaPlayer) {
@@ -518,7 +525,7 @@ object MentalitaetSpieler {
         )
         val startMs = SystemClock.elapsedRealtime()
         _startZeit.value = startMs
-        sleepJob = bereich.launch { sleepWachen(app, startMs, meinLauf) }
+        sleepJob = bereich.launch { sleepWachen(app, meinLauf) }
 
         var planQuelle: List<MentalSatz>? = null
         var planCache: List<MentalSchritt> = plan
@@ -614,6 +621,7 @@ object MentalitaetSpieler {
                     sleepJob?.cancel()
                     sleepJob = null
                     _startZeit.value = null
+                    sleepWeckerAbbrechen()
                     spielerBeenden()
                     fokusAbgeben()
                     wachLos()
@@ -732,6 +740,7 @@ object MentalitaetSpieler {
         sleepJob?.cancel()
         sleepJob = null
         _startZeit.value = null
+        sleepWeckerAbbrechen()
         pausiertDurchFokus = false
         manuellPausiert.value = false
         internetProbleme = false
@@ -758,19 +767,82 @@ object MentalitaetSpieler {
 
     /**
      * Sleep-Timer: beendet die Session nach der eingestellten Dauer ab Vorlesestart, still (ohne Ton, ohne Fehlermeldung).
-     * Prüft im Sekundentakt gegen die Echtzeit (elapsedRealtime), damit auch ein Tiefschlaf in einer Pause mitzählt;
-     * Schalter und Dauer gelten live, auch für eine laufende Session.
+     * Prüft gegen die Echtzeit (elapsedRealtime) und stellt zusätzlich einen weckenden Alarm aufs Ende, damit die Session
+     * auch endet, wenn das Handy in einer Pause gesperrt im Tiefschlaf liegt. Schalter und Dauer gelten live.
+     * Wird der Timer während einer Session eingeschaltet, deren Dauer schon überschritten ist, zählt er ab dem Einschalten.
      */
-    private suspend fun sleepWachen(app: Context, startMs: Long, meinLauf: Long) {
+    private suspend fun sleepWachen(app: Context, meinLauf: Long) {
+        var warAn = Einstellungen.get(app).mentalitaetSleepTimer
+        var gestelltFuer: Long? = null
         while (laufNummer.get() == meinLauf) {
-            val rest = sleepRestMs(app, startMs)
-            if (rest != null && rest <= 0L) {
-                Logbuch.sprache("Mentalität: Sleep-Timer abgelaufen", "nach ${(SystemClock.elapsedRealtime() - startMs) / 60_000L} min")
+            val e = Einstellungen.get(app)
+            val an = e.mentalitaetSleepTimer
+            val jetzt = SystemClock.elapsedRealtime()
+            if (an && !warAn) {
+                val bisher = _startZeit.value ?: jetzt
+                if (bisher + e.mentalitaetSleepMinuten * 60_000L <= jetzt) {
+                    _startZeit.value = jetzt
+                    Logbuch.sprache("Mentalität: Sleep-Timer eingeschaltet", "zählt ab jetzt, ${e.mentalitaetSleepMinuten} min")
+                }
+            }
+            warAn = an
+            val start = _startZeit.value ?: return
+            val ende = if (an) start + e.mentalitaetSleepMinuten * 60_000L else null
+            if (ende != null && ende <= jetzt) {
+                Logbuch.sprache("Mentalität: Sleep-Timer abgelaufen", "nach ${(jetzt - start) / 60_000L} min")
                 stoppIntern(fehler = null, dienstBeenden = true)
                 return
             }
-            delay(minOf(rest ?: SLEEP_TAKT_MS, SLEEP_TAKT_MS).coerceAtLeast(50L))
+            if (ende != gestelltFuer) {
+                if (ende != null) sleepWeckerStellen(app, ende) else sleepWeckerAbbrechen()
+                gestelltFuer = ende
+            }
+            // Aus: seltener nachsehen; an: im Sekundentakt bis zum Ende.
+            delay(if (ende == null) SLEEP_TAKT_AUS_MS else minOf(ende - jetzt, SLEEP_TAKT_MS).coerceAtLeast(50L))
         }
+    }
+
+    private var sleepWecker: PendingIntent? = null
+    private var sleepEmpfaenger: BroadcastReceiver? = null
+
+    /** Weckender Alarm aufs Ende des Sleep-Timers (auch im Doze); löst denselben stillen Stopp aus. */
+    private fun sleepWeckerStellen(app: Context, endeMs: Long) {
+        val am = app.getSystemService(AlarmManager::class.java) ?: return
+        if (sleepEmpfaenger == null) {
+            val empfaenger = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    haupt.post {
+                        if (aktiv && sleepAbgelaufen(context.applicationContext)) {
+                            Logbuch.sprache("Mentalität: Sleep-Timer abgelaufen", "per Alarm")
+                            stoppIntern(fehler = null, dienstBeenden = true)
+                        }
+                    }
+                }
+            }
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    app.registerReceiver(empfaenger, IntentFilter(SLEEP_AKTION), Context.RECEIVER_NOT_EXPORTED)
+                } else {
+                    app.registerReceiver(empfaenger, IntentFilter(SLEEP_AKTION))
+                }
+                sleepEmpfaenger = empfaenger
+            }.onFailure { Logbuch.fehler("Mentalität: Sleep-Alarm nicht registriert", it) }
+        }
+        sleepWeckerAbbrechen()
+        val pi = PendingIntent.getBroadcast(
+            app, 0, Intent(SLEEP_AKTION).setPackage(app.packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        runCatching { am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, endeMs, pi) }
+            .recoverCatching { am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, endeMs, pi) }
+            .onSuccess { sleepWecker = pi }
+            .onFailure { Logbuch.fehler("Mentalität: Sleep-Alarm nicht gestellt", it) }
+    }
+
+    private fun sleepWeckerAbbrechen() {
+        val pi = sleepWecker ?: return
+        sleepWecker = null
+        runCatching { appContext?.getSystemService(AlarmManager::class.java)?.cancel(pi) }
     }
 
     private fun dienstBeendenWennFrei(app: Context) {

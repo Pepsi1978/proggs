@@ -980,6 +980,7 @@
     {"versionCode": 971, "versionName": "1.8.960", "stand": "25.11.2026, 10:39 Uhr", "notiz": "Die Mac-Zentrale zählt unter einer anderen Sitzung gestartete CLIs nicht doppelt, ohne das automatische Aufräumen zu verändern, und prüft jede Minute sparsam."},
     {"versionCode": 972, "versionName": "1.8.961", "stand": "25.11.2026, 10:40 Uhr", "notiz": "Weiter in der Mentalität setzt erst nach einer laufenden Aufnahme fort und holt den Ton zuverlässig zurück, Stopp in der Benachrichtigung beendet nur das gerade laufende Vorlesen, und auch Hey Jarvis hält die Mentalität nur an."},
     {"versionCode": 973, "versionName": "1.8.962", "stand": "25.11.2026, 10:52 Uhr", "notiz": "Die Mac-Zentrale-Karte bleibt auch mit einer älteren Mac-App ehrlich: Knöpfe zählen nur, was dort wirklich installiert wird."},
-    {"versionCode": 974, "versionName": "1.8.963", "stand": "25.11.2026, 22:17 Uhr", "notiz": "Mentalität hat einen Sleep-Timer: Schalter und Minutenregler im Zahnrad-Menü beenden das Vorlesen nach der gewählten Dauer still, auch per Sprache einstellbar."}
+    {"versionCode": 974, "versionName": "1.8.963", "stand": "25.11.2026, 22:17 Uhr", "notiz": "Mentalität hat einen Sleep-Timer: Schalter und Minutenregler im Zahnrad-Menü beenden das Vorlesen nach der gewählten Dauer still, auch per Sprache einstellbar."},
+    {"versionCode": 975, "versionName": "1.8.964", "stand": "25.11.2026, 22:21 Uhr", "notiz": "Der Sleep-Timer bei Mentalität endet jetzt auch bei gesperrtem, pausiertem Handy pünktlich, und der Minutenregler übernimmt den Wert erst beim Loslassen."}
 ]
 }
