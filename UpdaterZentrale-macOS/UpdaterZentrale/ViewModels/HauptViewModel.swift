@@ -212,13 +212,8 @@ final class HauptViewModel {
     /// Beschriftung des Knopfs fuer alles, was nicht CLI-kritisch ist.
     var sicherText: String {
         let n = plaeneBerechnen().sicher.count
-        let nurKlick = programme.filter { $0.hatUpdate && $0.istHauptversionsSprung && !$0.eintrag.istCliKritisch }.count
-        if n == 0 {
-            if nurKlick > 0 { return "\(nurKlick) Hauptversion\(nurKlick == 1 ? "" : "en") nur per Klick auf der Karte" }
-            return allesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates"
-        }
+        if n == 0 { return allesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates" }
         return (n == 1 ? "1 Update installieren" : "\(n) Updates installieren") + "  ·  nicht CLI-kritisch"
-            + (nurKlick > 0 ? "  ·  \(nurKlick) nur per Klick" : "")
     }
 
     /// Beschriftung des Knopfs fuer die CLI-kritischen Updates.
@@ -226,6 +221,15 @@ final class HauptViewModel {
         let n = plaeneBerechnen().cli.count
         return n == 0 ? "Keine CLI-kritischen Updates"
             : (n == 1 ? "1 CLI-kritisches Update" : "\(n) CLI-kritische Updates") + " installieren"
+    }
+
+    /// Namen hinter einem Knopf, fuer seinen Tooltip (mit Hinweis auf einen echten Hauptversionswechsel).
+    func knopfListe(cli: Bool) -> String {
+        let plaene = plaeneBerechnen()
+        return (cli ? plaene.cli : plaene.sicher).map { s in
+            "• " + s.programm.name + "  " + s.programm.installierteVersion + " → " + s.programm.verfuegbareVersion
+                + (s.programm.istHauptversionsSprung ? "  (neue Hauptversion)" : "")
+        }.joined(separator: "\n")
     }
 
     var hatSichereUpdates: Bool { !plaeneBerechnen().sicher.isEmpty }
@@ -477,15 +481,14 @@ final class HauptViewModel {
         guard !plan.isEmpty else {
             Dialoge.hinweis(cli
                 ? "Es ist kein CLI-kritisches Update offen."
-                : "Es ist kein unkritisches Update offen, das gesammelt installiert werden kann. Prüfe zuerst, oder "
-                  + "aktualisiere einzelne Programme gezielt (Hauptversionssprünge nur per Klick auf der Karte).")
+                : "Es ist kein unkritisches Update offen. Prüfe zuerst.")
             return
         }
 
-        let nurKlick = programme.filter { $0.hatUpdate && $0.istHauptversionsSprung }
         let liste = plan.enumerated().map { i, s in
             "  \(i + 1). \(s.programm.name)  (\(Sammelplan.phasenName(s.phase)), "
             + Protokollierung.dauerText(s.programm.erwarteteDauerSekunden) + ")"
+            + (s.programm.istHauptversionsSprung ? "  – neue Hauptversion " + s.programm.verfuegbareVersion : "")
         }.joined(separator: "\n")
         let frage = cli
             ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
@@ -495,7 +498,6 @@ final class HauptViewModel {
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
             : "Reihenfolge der Updates (keines davon ist CLI-kritisch):\n\n" + liste
               + Self.abhaengigkeiten(plan, plaene.cli)
-              + (nurKlick.isEmpty ? "" : "\n\nNur per Klick auf der Karte (Hauptversion): " + nurKlick.map(\.name).joined(separator: ", "))
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
         guard Dialoge.fragen(frage, cli ? "CLI-kritische Updates installieren?" : "Unkritische Updates installieren?") else { return }
 
@@ -503,6 +505,15 @@ final class HauptViewModel {
         stempel.dateFormat = "yyyyMMdd-HHmmss"
         // Die Frage des CLI-Knopfs war schon "jetzt die CLIs schließen" -- im Lauf keine zweite.
         await sammelAusfuehren(plan, sammelId: "sammel-" + (cli ? "cli-" : "") + stempel.string(from: Date()), cliBestaetigt: cli)
+    }
+
+    /// Warum ein Update im Sammellauf nicht bestaetigt installiert wurde, kurz und lesbar.
+    nonisolated static func grund(_ b: UpdateBericht?) -> String {
+        guard let b else { return "kein Ergebnis – der Lauf brach vorher ab" }
+        let erste = b.meldung.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty } ?? ""
+        let text = erste.isEmpty ? b.ergebnisText : b.ergebnisText + " – " + erste
+        return text.count > 160 ? String(text.prefix(159)) + "…" : text
     }
 
     /// Mit zwei Knoepfen bestimmt der Benutzer die Reihenfolge -- manche unkritischen Updates bauen
@@ -568,6 +579,7 @@ final class HauptViewModel {
         var cliHinweis = ""
         var uebergabeHinweise: [String] = []
         var offeneFehler: [(ProgrammEintrag, UpdateBericht)] = []
+        var probleme: [String] = []   // "Name: Grund" jedes Updates, das nicht bestaetigt installiert wurde
         // Fehler gehen sofort an eine Sitzung. Nur solange die eigenen Werkzeuge und die CLI-kritischen
         // Updates noch ausstehen, warten sie: diese Schritte wollen alle Terminals zu und beendeten die Sitzung.
         var fehlerHalten = plan.contains { $0.phase <= Sammelplan.phaseCli }
@@ -656,6 +668,9 @@ final class HauptViewModel {
                 if !fehlerHalten { fehlerFreigeben() }
             }
             if bericht?.ergebnis == .abgebrochen { s.programm.imSammelFreigeben { !fehlerHalten } }
+            if bericht == nil || bericht!.istFehler || bericht!.ergebnis == .abgebrochen {
+                probleme.append(s.programm.name + ": " + Self.grund(bericht))
+            }
             laufend.removeAll { $0.name == s.programm.name }
             fertig += 1
             anzeigen()
@@ -774,9 +789,8 @@ final class HauptViewModel {
             halteSchrittFertig(phase)
         }
 
-        let fehler = laeufe.filter { ["Fehlgeschlagen", "Nicht verifiziert", "ohne Bericht"].contains($0.ergebnis) }.count
         kopfStatus = laufName + " sind durchgelaufen (" + Protokollierung.dauerText(Date().timeIntervalSince(gesamtBeginn)) + ")"
-            + (fehler > 0 ? " – \(fehler) mit Problemen, siehe rote Karten." : ".")
+            + (probleme.isEmpty ? "." : " – nicht installiert: " + probleme.joined(separator: "; ") + ".")
             + (cliHinweis.contains("übersprungen") ? cliHinweis : "")
             + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "")
             + uebergabeText()

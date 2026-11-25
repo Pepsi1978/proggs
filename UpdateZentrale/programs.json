@@ -365,8 +365,7 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "akzent": "#007808",
-      "hauptversionNurPerKlick": true,
-      "hinweis": "Sprünge auf eine neue Hauptversion (z. B. 8 → 9) nur bewusst per Klick auf der Karte."
+      "hinweis": "Ein Wechsel der Hauptversion (z. B. 8 → 9) ist auf der Karte markiert und läuft mit den Sammelknöpfen mit."
     },
     {
       "id": "rclone",
@@ -1011,8 +1010,7 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
-      "hinweis": "Projekte nutzen ihre eigene TypeScript-Version. Sprünge auf eine neue Hauptversion nur bewusst.",
-      "hauptversionNurPerKlick": true,
+      "hinweis": "Projekte nutzen ihre eigene TypeScript-Version; das globale TypeScript betrifft nur Aufrufe außerhalb von Projekten.",
       "nach": [
         "nodejs"
       ]
@@ -1079,8 +1077,7 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
-      "hinweis": "Sprünge auf eine neue Hauptversion nur bewusst – Node.js bringt ohnehin eine passende npm-Version mit.",
-      "hauptversionNurPerKlick": true,
+      "hinweis": "Installiert die neueste npm-Version, auch über eine Hauptversion hinweg.",
       "nach": [
         "nodejs"
       ]

@@ -12,8 +12,8 @@ import Foundation
 /// 3. Alles andere.
 /// Innerhalb einer Phase geht ein Eintrag, dessen Voraussetzungen ("nach") im selben Lauf stehen,
 /// nach ihnen; sonst das kuerzeste erwartete Update zuerst, damit die grossen Installer (Android
-/// Studio, Docker, .NET) die schnellen nicht aufhalten. Hauptversionsspruenge mit
-/// "hauptversionNurPerKlick" bleiben ganz draussen.
+/// Studio, Docker, .NET) die schnellen nicht aufhalten. Jedes offene Update kommt in den Plan, auch
+/// ein Hauptversionssprung -- die Sammelknoepfe installieren alles, was sie anzeigen.
 @MainActor
 enum Sammelplan {
     static let phaseEigene = 1
@@ -32,7 +32,7 @@ enum Sammelplan {
     }
 
     static func planen(_ offen: [ProgrammViewModel]) -> [Schritt] {
-        let liste = offen.filter { !$0.istHauptversionsSprung }
+        let liste = offen
         let ids = Set(liste.map { $0.eintrag.id.lowercased() })
         // Eine Ebene genuegt fuer die Ketten des Katalogs (JDK → SDK, Node → npm).
         func wartet(_ p: ProgrammViewModel) -> Bool { p.eintrag.nach.contains { ids.contains($0.lowercased()) } }

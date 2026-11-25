@@ -612,12 +612,8 @@ public sealed partial class HauptViewModel : ObservableObject
         get
         {
             var n = SichererPlan.Count;
-            var nurKlick = Programme.Count(p => p.HatUpdate && p.IstHauptversionsSprung && !p.KannCliBeenden);
-            if (n == 0)
-                return nurKlick > 0 ? $"{nurKlick} Hauptversion{(nurKlick == 1 ? "" : "en")} nur per Klick auf der Karte"
-                    : AllesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates";
-            return (n == 1 ? "1 Update installieren" : $"{n} Updates installieren") + "  ·  nicht CLI-kritisch"
-                   + (nurKlick > 0 ? $"  ·  {nurKlick} nur per Klick" : "");
+            if (n == 0) return AllesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates";
+            return (n == 1 ? "1 Update installieren" : $"{n} Updates installieren") + "  ·  nicht CLI-kritisch";
         }
     }
 
@@ -659,14 +655,13 @@ public sealed partial class HauptViewModel : ObservableObject
         {
             Dialoge.Hinweis(cli
                 ? "Es ist kein CLI-kritisches Update offen."
-                : "Es ist kein unkritisches Update offen, das gesammelt installiert werden kann. Prüfe zuerst, oder "
-                  + "aktualisiere einzelne Programme gezielt (Hauptversionssprünge nur per Klick auf der Karte).");
+                : "Es ist kein unkritisches Update offen. Prüfe zuerst.");
             return;
         }
 
-        var nurKlick = Programme.Where(p => p.HatUpdate && p.IstHauptversionsSprung).ToList();
         var liste = string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name}  ({Sammelplan.PhasenName(s.Phase)}, "
-                                                           + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden) + ")"));
+                                                           + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden) + ")"
+                                                           + (s.Programm.IstHauptversionsSprung ? "  – neue Hauptversion " + s.Programm.VerfuegbareVersion : "")));
         var frage = cli
             ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
               + string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name} – {s.Programm.Eintrag.CliRisiko}"))
@@ -674,14 +669,20 @@ public sealed partial class HauptViewModel : ObservableObject
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
             : "Reihenfolge der Updates (keines davon ist CLI-kritisch):\n\n" + liste
               + Abhaengigkeiten(plan, plaene.Cli)
-              + (nurKlick.Count > 0
-                  ? "\n\nNur per Klick auf der Karte (Hauptversion): " + string.Join(", ", nurKlick.Select(p => p.Name))
-                  : "")
               + "\n\nBei laufenden Programmen wird vorher nachgefragt.";
         if (!Dialoge.Fragen(frage, cli ? "CLI-kritische Updates installieren?" : "Unkritische Updates installieren?")) return;
 
         // The CLI button's question already was "close the CLIs now" -- no second one inside the run.
         await SammelAusfuehrenAsync(plan, "sammel-" + (cli ? "cli-" : "") + DateTime.Now.ToString("yyyyMMdd-HHmmss"), cliBestaetigt: cli);
+    }
+
+    /// <summary>Why an update of a collective run was not confirmed installed, short and readable.</summary>
+    public static string Grund(UpdateBericht? b)
+    {
+        if (b is null) return "kein Ergebnis – der Lauf brach vorher ab";
+        var erste = b.Meldung.Split('\n').Select(z => z.Trim()).FirstOrDefault(z => z.Length > 0) ?? "";
+        var text = erste.Length == 0 ? b.ErgebnisText : b.ErgebnisText + " – " + erste;
+        return text.Length > 160 ? text[..159] + "…" : text;
     }
 
     /// <summary>
@@ -735,6 +736,7 @@ public sealed partial class HauptViewModel : ObservableObject
         var cliHinweis = "";
         var uebergabeHinweise = new List<string>();
         var offeneFehler = new List<(ProgrammEintrag Eintrag, UpdateBericht Bericht)>();
+        var probleme = new List<string>();   // "Name: reason" of every update not confirmed installed
         // Failures go to a session at once. Only while the own tools and the CLI-critical updates are
         // still ahead do they wait: those steps ask to close all terminals and would end that session.
         var fehlerHalten = plan.Any(s => s.Phase <= Sammelplan.PhaseCli);
@@ -837,6 +839,8 @@ public sealed partial class HauptViewModel : ObservableObject
             }
             finally
             {
+                if (bericht is null || bericht.IstFehler || bericht.Ergebnis == LaufErgebnis.Abgebrochen)
+                    lock (probleme) probleme.Add(s.Programm.Name + ": " + Grund(bericht));
                 laufend.RemoveAll(l => l.Name == s.Programm.Name);
                 fertig++;
                 Anzeigen();
@@ -954,9 +958,8 @@ public sealed partial class HauptViewModel : ObservableObject
                 HalteSchrittFertig(phase.Key);
             }
 
-            var fehler = laeufe.Count(l => l.Ergebnis is "Fehlgeschlagen" or "Nicht verifiziert" or "ohne Bericht");
             KopfStatus = laufName + " sind durchgelaufen (" + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + ")"
-                         + (fehler > 0 ? " – " + fehler + " mit Problemen, siehe rote Karten." : ".")
+                         + (probleme.Count == 0 ? "." : " – nicht installiert: " + string.Join("; ", probleme) + ".")
                          + (cliHinweis.Contains("übersprungen") ? cliHinweis : "")
                          + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "")
                          + UebergabeText();

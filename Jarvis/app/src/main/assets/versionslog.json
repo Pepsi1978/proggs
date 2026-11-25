@@ -975,6 +975,8 @@
     {"versionCode": 966, "versionName": "1.8.955", "stand": "24.11.2026, 18:20 Uhr", "notiz": "Auf der Startseite verschwinden abgehakte heutige Aufgaben sofort aus der offenen Liste und stehen im neuen, zugeklappten Bereich Erledigt; Antippen dort öffnet sie wieder."},
     {"versionCode": 967, "versionName": "1.8.956", "stand": "24.11.2026, 18:25 Uhr", "notiz": "Im Bereich Erledigt öffnet nur ein Tipp auf Titel oder Haken eine Aufgabe wieder, und der Bereich klappt beim Wechsel auf den Startreiter ohne Flackern zu."},
     {"versionCode": 968, "versionName": "1.8.957", "stand": "25.11.2026, 10:25 Uhr", "notiz": "Die Mac-Zentrale zählt unter Programmier-CLI jetzt auch offene Antigravity-Sitzungen und jede Sitzung genau einmal, aktualisiert jede Minute."},
-    {"versionCode": 969, "versionName": "1.8.958", "stand": "25.11.2026, 10:28 Uhr", "notiz": "Eine pausierte Mentalität-Vorlesung bleibt erhalten, während du diktierst, Aufträge abschickst oder andere Jarvis-Funktionen nutzt, und läuft nach Weiter an derselben Stelle fort."}
+    {"versionCode": 969, "versionName": "1.8.958", "stand": "25.11.2026, 10:28 Uhr", "notiz": "Eine pausierte Mentalität-Vorlesung bleibt erhalten, während du diktierst, Aufträge abschickst oder andere Jarvis-Funktionen nutzt, und läuft nach Weiter an derselben Stelle fort."},
+    {"versionCode": 970, "versionName": "1.8.959", "stand": "25.11.2026, 10:37 Uhr", "notiz": "Die Mac-Zentrale installiert jetzt alle angezeigten Updates per Knopf, auch eine neue Hauptversion wie npm, und nennt bei einem Fehler Programm und Grund."},
+    {"versionCode": 971, "versionName": "1.8.960", "stand": "25.11.2026, 10:39 Uhr", "notiz": "Die Mac-Zentrale zählt unter einer anderen Sitzung gestartete CLIs nicht doppelt, ohne das automatische Aufräumen zu verändern, und prüft jede Minute sparsam."}
 ]
 }

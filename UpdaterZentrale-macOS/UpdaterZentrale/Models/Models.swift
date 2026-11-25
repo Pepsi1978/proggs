@@ -113,8 +113,8 @@ struct ProgrammEintrag: Codable {
     /// Text des Bandes "wird uebernommen" statt des Standards "nach dem Neustart des Programms".
     var uebernahmeText: String?
 
-    /// Ein Sprung auf eine neue Hauptversion (TypeScript 6 → 7, FFmpeg 8 → 9) wird angezeigt, aber
-    /// die Sammelknoepfe lassen ihn aus; er laeuft nur per bewusstem Klick auf der Karte.
+    /// Veraltet und ohne Wirkung: Hauptversionsspruenge laufen wie jedes andere Update in den
+    /// Sammelknoepfen mit. Wird nur noch eingelesen, damit aeltere Kataloge gueltig bleiben.
     var hauptversionNurPerKlick: Bool = false
 
     /// Erwartete Update-Dauer in Sekunden, bis echte Laeufe gemessen sind (verlauf.jsonl). Ohne sie

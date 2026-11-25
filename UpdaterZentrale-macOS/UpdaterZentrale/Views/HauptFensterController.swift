@@ -538,6 +538,8 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         cliUpdatesSchalter.isHidden = !modell.hatCliUpdates
         cliUpdatesSchalter.isEnabled = frei
         cliUpdatesSchalter.titel = "⚠  " + modell.cliText
+        cliUpdatesSchalter.toolTip = "Updates, die laufende CLI-Sitzungen (Claude Code, Codex, Terminals) beenden können. Vorher die CLIs schließen.\n\n" + modell.knopfListe(cli: true)
+        sichereUpdatesSchalter.toolTip = "Alle Updates, die keine CLI-Sitzung unterbrechen – eigene Werkzeuge zuerst, dann die kürzesten.\n\n" + modell.knopfListe(cli: false)
         sichereUpdatesSchalter.isEnabled = frei
         sichereUpdatesSchalter.titel = modell.sicherText
         sichereUpdatesSchalter.auspraegung = modell.hatSichereUpdates ? .haupt : .zweit

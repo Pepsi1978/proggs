@@ -793,12 +793,12 @@ public sealed partial class ProgrammViewModel : ObservableObject
           + (_dauern.Count > 1 ? " (Median aus " + Math.Min(_dauern.Count, 3) + ")" : "")
         : "⏱ Update ≈ " + Protokollierung.DauerText(ErwarteteDauerSekunden) + " (geschätzt)";
 
-    /// <summary>"Install all" leaves a major version jump to a deliberate click when the catalog says so.</summary>
+    /// <summary>Is this really a major version change (11.x → 12.x)? Display hint only; the update still runs with the collective buttons.</summary>
     public bool IstHauptversionsSprung
     {
         get
         {
-            if (!Eintrag.HauptversionNurPerKlick) return false;
+            if (!HatUpdate) return false;
             static string Haupt(string v) => new string(v.TrimStart('<', '>', ' ', 'v').TakeWhile(char.IsDigit).ToArray());
             var alt = Haupt(InstallierteVersion);
             var neu = Haupt(VerfuegbareVersion);

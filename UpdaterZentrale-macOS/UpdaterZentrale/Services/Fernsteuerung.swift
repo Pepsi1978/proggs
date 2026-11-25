@@ -182,12 +182,10 @@ final class Fernsteuerung {
                 switch b.ergebnis {
                 case .erfolgreich, .bereitsAktuell: e["ok"] = true; e["text"] = b.versionNachher.istLeer ? "aktualisiert" : "jetzt " + b.versionNachher; ok += 1
                 case .ausstehend: e["ok"] = true; e["text"] = "installiert, wird nach einem Neustart des Programms aktiv"; neustart.append(p.name); ok += 1
-                case .abgebrochen: e["ok"] = false; e["text"] = "abgebrochen oder am Mac abgelehnt"
-                case .fehlgeschlagen: e["ok"] = false; e["text"] = "fehlgeschlagen – an Claude Code übergeben"
-                case .nichtVerifiziert: e["ok"] = false; e["text"] = "nicht bestätigt – an Claude Code übergeben"
+                case .abgebrochen, .fehlgeschlagen, .nichtVerifiziert: e["ok"] = false; e["text"] = HauptViewModel.grund(b)
                 }
             } else {
-                e["ok"] = false; e["text"] = "nicht gelaufen"
+                e["ok"] = false; e["text"] = "nicht gelaufen – der Lauf endete vorher"
             }
             ergebnisse.append(e)
         }
@@ -232,7 +230,7 @@ final class Fernsteuerung {
             var e: [String: Any] = [
                 "id": p.eintrag.id, "name": p.name, "inst": p.installierteVersion, "verf": p.verfuegbareVersion,
                 "kritisch": p.eintrag.istCliKritisch, "update": p.hatUpdate, "fehler": fehler, "laeuft": p.istBeschaeftigt,
-                "nurKlick": p.hatUpdate && p.istHauptversionsSprung, "neustart": p.uebernahmeOffen,
+                "hauptversion": p.istHauptversionsSprung, "neustart": p.uebernahmeOffen,
                 "status": kurz(p.statusText, 160)
             ]
             if let grund = p.eintrag.cliKritischGrund { e["grund"] = kurz(grund, 140) }

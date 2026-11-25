@@ -221,8 +221,8 @@ public sealed class ProgrammEintrag
     public string? UebernahmeText { get; set; }
 
     /// <summary>
-    /// A jump to a new major version (TypeScript 6 → 7, FFmpeg 8 → 9) is shown, but "install all"
-    /// leaves it out; it runs only on a deliberate click on the card.
+    /// Obsolete and without effect: major version jumps run with the collective buttons like any
+    /// other update. Still read so that older catalogs stay valid.
     /// </summary>
     public bool HauptversionNurPerKlick { get; set; }
 

@@ -276,9 +276,10 @@ final class ProgrammViewModel {
             : "⏱ Update ≈ " + Protokollierung.dauerText(erwarteteDauerSekunden) + " (geschätzt)"
     }
 
-    /// Die Sammelknoepfe lassen einen Hauptversionssprung aus, wenn der Katalog das sagt.
+    /// Liegt wirklich ein Wechsel der Hauptversion vor (11.x → 12.x)? Nur ein Hinweis fuer die Anzeige;
+    /// das Update laeuft trotzdem mit den Sammelknoepfen.
     var istHauptversionsSprung: Bool {
-        guard eintrag.hauptversionNurPerKlick else { return false }
+        guard hatUpdate else { return false }
         func haupt(_ v: String) -> String {
             String(v.drop(while: { "<> v".contains($0) }).prefix(while: { $0.isNumber }))
         }
