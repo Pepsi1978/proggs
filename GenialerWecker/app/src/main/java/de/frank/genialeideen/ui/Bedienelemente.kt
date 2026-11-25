@@ -27,10 +27,15 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
@@ -328,7 +333,15 @@ fun Regler3D(
     val material = LocalMaterial.current
     val tokens = LocalDesignTokens.current
     val reduziert = LocalBewegungReduziert.current
+    val haptik = LocalHapticFeedback.current
     val quelle = remember { MutableInteractionSource() }
+    val spanneGesamt = (bereich.endInclusive - bereich.start).takeIf { it > 0f } ?: 1f
+    // Haptisches Einrasten in 10 %-Schritten (oder in echten Stufen bei wenigen Schritten),
+    // damit sich Schieberegler fühlbar präzise anfühlen, ohne dauerhaft zu vibrieren.
+    val rasten = if (stufen in 1..20) stufen + 1 else 10
+    val aktuelleRaste = (((wert - bereich.start) / spanneGesamt) * rasten).toInt().coerceIn(0, rasten)
+    var letzteRaste by remember(bereich, rasten) { mutableIntStateOf(aktuelleRaste) }
+    LaunchedEffect(aktuelleRaste) { letzteRaste = aktuelleRaste }
 
     val bahnRadius = kleinerRadius(tokens.chipRadius, BahnHoehe)
     val bahnForm = RoundedCornerShape(bahnRadius)
@@ -339,7 +352,14 @@ fun Regler3D(
 
     Slider(
         value = wert,
-        onValueChange = aufAenderung,
+        onValueChange = { neu ->
+            val raste = (((neu - bereich.start) / spanneGesamt) * rasten).toInt().coerceIn(0, rasten)
+            if (raste != letzteRaste) {
+                letzteRaste = raste
+                haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
+            aufAenderung(neu)
+        },
         modifier = modifier,
         enabled = aktiviert,
         onValueChangeFinished = aufAenderungFertig,
@@ -450,6 +470,7 @@ fun Schalter3D(
     val material = LocalMaterial.current
     val tokens = LocalDesignTokens.current
     val reduziert = LocalBewegungReduziert.current
+    val haptik = LocalHapticFeedback.current
     val quelle = remember { MutableInteractionSource() }
 
     val bahnForm = RoundedCornerShape(kleinerRadius(tokens.chipRadius, SchalterHoehe))
@@ -489,7 +510,10 @@ fun Schalter3D(
                         indication = null,
                         enabled = aktiviert,
                         role = Role.Switch,
-                        onValueChange = aufWechsel,
+                        onValueChange = { neu ->
+                            haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            aufWechsel(neu)
+                        },
                     )
                 } else {
                     Modifier
@@ -501,7 +525,14 @@ fun Schalter3D(
         Box(
             Modifier
                 .matchParentSize()
-                .vertieftesMaterial(bahnForm, bahnFarbe, material, tiefe = 5.dp),
+                .vertieftesMaterial(bahnForm, bahnFarbe, material, tiefe = 5.dp)
+                .then(
+                    if (an && aktiviert) Modifier.border(
+                        1.dp,
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.34f), Color.Transparent)),
+                        bahnForm,
+                    ) else Modifier,
+                ),
         )
         Box(
             Modifier
@@ -560,6 +591,7 @@ fun Chip3D(
     val material = LocalMaterial.current
     val tokens = LocalDesignTokens.current
     val reduziert = LocalBewegungReduziert.current
+    val haptik = LocalHapticFeedback.current
     val quelle = remember { MutableInteractionSource() }
     val gedrueckt by quelle.collectIsPressedAsState()
 
@@ -592,7 +624,10 @@ fun Chip3D(
                 role = Role.Checkbox,
                 interactionSource = quelle,
                 indication = null,
-                onClick = aufTipp,
+                onClick = {
+                    haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    aufTipp()
+                },
             )
             .minimumInteractiveComponentSize()
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
@@ -600,7 +635,7 @@ fun Chip3D(
                 if (aktiviert) {
                     // Jeder Chip wirft nach außen Schatten — gewählt etwas höher, nie eingedrückt.
                     Modifier.shadow(
-                        elevation = if (gedrueckt) 1.dp else if (gewaehlt) 5.dp else 3.dp,
+                        elevation = if (gedrueckt) 1.dp else if (gewaehlt) 6.dp else 2.5f.dp,
                         shape = form,
                         ambientColor = if (gewaehlt) schattenFarbe else Color.Black,
                         spotColor = if (gewaehlt) schattenFarbe else Color.Black,
@@ -609,7 +644,7 @@ fun Chip3D(
                     Modifier
                 },
             )
-            .erhabenesMaterial(form, grund, material, glanz = if (gewaehlt) 0f else 0.18f)
+            .erhabenesMaterial(form, grund, material, glanz = if (gewaehlt) 0.24f else 0.14f)
             .padding(horizontal = 14.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
     ) {

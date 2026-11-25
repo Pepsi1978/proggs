@@ -55,12 +55,17 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.animation.togetherWith
+import de.frank.wecker.design.heroFase3D
+import de.frank.wecker.design.LocalMaterial
 
 /** A tapped action waiting for the service's confirmation. [afterSeq] ignores results that existed before the tap. */
 private data class PendingAction(val id: String, val ringId: Long, val action: String, val afterSeq: Long)
@@ -300,19 +305,24 @@ class AlarmActivity : ComponentActivity() {
                             val screenHeight = maxHeight
                             val content = @Composable { modifier: Modifier ->
                                 BoxWithConstraints(modifier) {
-                                    val contentWidth = maxWidth - 48.dp
+                                    val contentWidth = maxWidth - 40.dp
                                     val contentHeight = maxHeight
-                                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Column(
+                                        Modifier.fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 18.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+                                    ) {
                                         // Nur der dekorative Kopf unterscheidet sich; alles darunter ist in jedem
                                         // Design derselbe Code. Die Uhr zeigt immer die echte aktuelle Zeit.
                                         WeckKopf(alarm, contentWidth, contentHeight, shownFeedback != null)
                                         if (alarm != null) WeckSchritte(alarm, state.step, state.variation)
-                                        if (shownFeedback == null && state.message.isNotBlank()) Text(state.message, color = LocalSemantisch.current.warnung)
-                                        if (shownFeedback == null && shownMessage.isNotBlank()) Text(shownMessage)
+                                        if (shownFeedback == null && state.message.isNotBlank()) Text(state.message, color = LocalSemantisch.current.warnung, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                        if (shownFeedback == null && shownMessage.isNotBlank()) Text(shownMessage, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                         if (alarm != null && alarm.photoRequired && shownFeedback == null) {
                                             Section("Deine Foto-Aufgabe") {
-                                                if (alarm.reference.isNotBlank()) Box(Modifier.heightIn(max = minOf(240.dp, contentHeight * 0.3f))) { PhotoPreview(File(alarm.reference)) }
+                                                if (alarm.reference.isNotBlank()) Box(Modifier.heightIn(max = minOf(220.dp, contentHeight * 0.28f))) { PhotoPreview(File(alarm.reference)) }
                                                 if (alarm.minBrightness > 0) Text("Mindestens ${alarm.minBrightness} % Helligkeit")
                                                 if (alarm.color != "none") Text("${PhotoCheck.colors[alarm.color]}: mindestens ${alarm.colorPercent} % des Bildes")
                                                 Text("Beenden öffnet die Kamera. Der Wecker stoppt erst, wenn das Foto passt.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
@@ -322,21 +332,53 @@ class AlarmActivity : ComponentActivity() {
                                 }
                             }
                             val actions = @Composable { modifier: Modifier, vertical: Boolean ->
-                                Column(modifier.background(gold.flaeche.copy(alpha = .9f)).drawBehind {
-                                    val line = 1.dp.toPx()
-                                    if (vertical) drawLine(gold.primaer.copy(alpha = .5f), Offset(0f, 0f), Offset(0f, size.height), line)
-                                    else drawLine(gold.primaer.copy(alpha = .5f), Offset(0f, 0f), Offset(size.width, 0f), line)
-                                }.padding(horizontal = 16.dp, vertical = 12.dp),
+                                val dockForm = if (vertical) RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
+                                else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                                Column(
+                                    modifier
+                                        .clip(dockForm)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    gold.flaecheErhoeht.copy(alpha = 0.94f),
+                                                    gold.flaeche.copy(alpha = 0.97f),
+                                                ),
+                                            ),
+                                        )
+                                        .border(
+                                            1.dp,
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    gold.primaer.copy(alpha = 0.50f),
+                                                    gold.rahmen.copy(alpha = 0.22f),
+                                                ),
+                                            ),
+                                            dockForm,
+                                        )
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp, if (vertical) Alignment.CenterVertically else Alignment.Top)) {
-
+                                    verticalArrangement = Arrangement.spacedBy(10.dp, if (vertical) Alignment.CenterVertically else Alignment.Top),
+                                ) {
                                     // Identical for test and real alarms; the photo task can never be bypassed here.
-                                    if (alarm != null) WeckTasten(alarm, checking, shownFeedback?.action, snoozeWiggle?.takeIf { it.first == displayRing },
-                                        endWiggle?.takeIf { it.first == displayRing }, vertical, screenHeight,
-                                        onSnooze = { send("SNOOZE", alarm.id, state.ringId) }, onEnd = onEnd)
-                                    else StillerKnopf("Zurück zur App", { finish() })
-                                    // The only visible difference between a test and a real alarm.
-                                    // Unten stehen bewusst nur die zwei Tasten – kein Test-Hinweis, keine Zähler.
+                                    if (alarm != null) {
+                                        val rest = (alarm.snoozeLimit - alarm.snoozes).coerceAtLeast(0)
+                                        if (rest > 0 || alarm.photoRequired) {
+                                            val hinweis = buildList {
+                                                if (rest > 0) add("Schlummern: ${alarm.snoozeMinutes} Min. (noch $rest×)")
+                                                if (alarm.photoRequired) add("Stopp mit Foto-Aufgabe")
+                                            }.joinToString(" · ")
+                                            Text(
+                                                hinweis,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = gold.textGedaempft,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                maxLines = 1,
+                                            )
+                                        }
+                                        WeckTasten(alarm, checking, shownFeedback?.action, snoozeWiggle?.takeIf { it.first == displayRing },
+                                            endWiggle?.takeIf { it.first == displayRing }, vertical, screenHeight,
+                                            onSnooze = { send("SNOOZE", alarm.id, state.ringId) }, onEnd = onEnd)
+                                    } else StillerKnopf("Zurück zur App", { finish() })
                                 }
                             }
                             if (wide) Row(Modifier.fillMaxSize()) {
@@ -456,17 +498,35 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480; 0f at 1600
         }), label = "wackeln").value
     val wackelnd = Modifier.graphicsLayer { rotationZ = wackeln; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f) }
-    val figur = (minOf(contentWidth * 0.4f, contentHeight * 0.22f)).coerceIn(0.dp, 150.dp)
+    val figur = (minOf(contentWidth * 0.36f, contentHeight * 0.21f)).coerceIn(0.dp, 136.dp)
     when (entwurf) {
         de.frank.wecker.design.Design.TRAUMRAUM -> {
-            val form = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp)
-            Column(Modifier.fillMaxWidth().clip(form).background(gold.flaecheErhoeht).padding(vertical = 30.dp, horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (figur >= 90.dp) Wecker3DFigur(now, figur, wackelnd)
+            // Skulpturale, rundum abgerundete 3D-Kuppel mit warmem Glut-Horizont und Lichtfase.
+            val form = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 44.dp, bottomEnd = 44.dp)
+            Column(
+                Modifier.fillMaxWidth()
+                    .shadow(18.dp, form, ambientColor = gold.primaer.copy(alpha = 0.45f), spotColor = Color.Black.copy(alpha = 0.65f))
+                    .clip(form)
+                    .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.10f else 0.08f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.14f))))
+                    .drawBehind {
+                        drawRect(
+                            Brush.radialGradient(
+                                listOf(gold.primaer.copy(alpha = if (gold.istDunkel) 0.24f else 0.15f), Color.Transparent),
+                                center = Offset(size.width * 0.5f, size.height * 0.92f),
+                                radius = size.width * 0.72f,
+                            ),
+                        )
+                    }
+                    .glanzBogen(deckung = if (gold.istDunkel) 0.10f else 0.24f)
+                    .heroFase3D(form, gold.heroKante, if (gold.istDunkel) gold.akzentWarm else Color.White,
+                        if (gold.istDunkel) 0.42f else 0.70f, if (gold.istDunkel) 0.50f else 0.24f, 1f)
+                    .padding(vertical = 22.dp, horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (figur >= 84.dp) Wecker3DFigur(now, figur, wackelnd)
                 Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
-                // Genau der Stil, mit dem gemessen wurde — dadurch passt die Uhrzeit nachweislich.
-                // Rollende Ziffern mit Glutglanz, wie im Kopf der Weckerliste.
-                RollendeUhr(formatClock(now), uhrStil(contentWidth - 40.dp, 88f, zahlSchrift(),
+                RollendeUhr(formatClock(now), uhrStil((contentWidth - 40.dp).coerceAtLeast(80.dp), 84f, zahlSchrift(),
                         androidx.compose.ui.text.font.FontWeight.Bold, gold.primaer),
                     Modifier.glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true))
                 Text(name, style = MaterialTheme.typography.headlineSmall,
@@ -475,12 +535,22 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             }
         }
         de.frank.wecker.design.Design.MORGENRUHE -> {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (figur >= 90.dp) Wecker3DFigur(now, figur, wackelnd)
+            val form = RoundedCornerShape(24.dp)
+            Column(
+                Modifier.fillMaxWidth()
+                    .shadow(14.dp, form, ambientColor = gold.akzentWarm.copy(alpha = 0.35f), spotColor = Color.Black.copy(alpha = 0.35f))
+                    .clip(form)
+                    .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.05f), gold.heroGrund, gold.heroGrund.dunkler(0.06f))))
+                    .glanzBogen(deckung = if (gold.istDunkel) 0.08f else 0.20f)
+                    .heroFase3D(form, gold.heroKante, Color.White, if (gold.istDunkel) 0.24f else 0.65f, if (gold.istDunkel) 0.42f else 0.20f, 1f)
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (figur >= 84.dp) Wecker3DFigur(now, figur, wackelnd)
+                Box(Modifier.width(44.dp).height(2.dp).background(gold.akzentWarm))
                 Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
-                // Rollende Ziffern mit Morgenglanz.
-                RollendeUhr(formatClock(now), uhrStil(contentWidth, 76f, zahlSchrift(),
+                RollendeUhr(formatClock(now), uhrStil((contentWidth - 40.dp).coerceAtLeast(80.dp), 74f, zahlSchrift(),
                         androidx.compose.ui.text.font.FontWeight.Light, gold.primaer),
                     Modifier.glanzLauf(staerke = 0.6f, farbe = schriftGlanzFarbe(), nurSchrift = true))
                 Text(name, style = MaterialTheme.typography.headlineSmall,
@@ -488,37 +558,66 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             }
         }
         de.frank.wecker.design.Design.ORBIT -> {
-            // Kopfzeile bleibt über die ganze Breite verteilt; Wecker, Uhrzeit und Name stehen mittig wie in den anderen Designs.
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("WECKER AKTIV", fontFamily = IdeenSchriftFest, color = gold.akzentWarm,
-                        style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
+            val form = RoundedCornerShape(8.dp)
+            val orbitMaterial = LocalMaterial.current
+            Column(
+                Modifier.fillMaxWidth()
+                    .then(
+                        if (orbitMaterial.schatten) Modifier.shadow(14.dp, form, ambientColor = gold.primaer.copy(alpha = 0.40f), spotColor = Color.Black.copy(alpha = 0.55f))
+                        else Modifier,
+                    )
+                    .clip(form)
+                    .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.07f), gold.heroGrund, gold.heroGrund.dunkler(0.10f))))
+                    .glanzBogen(deckung = if (gold.istDunkel) 0.10f else 0.18f)
+                    .nut(form, alpha = 0.24f)
+                    .heroFase3D(form, gold.heroKante, gold.primaer.heller(0.35f), if (gold.istDunkel) 0.45f else 0.55f, if (gold.istDunkel) 0.52f else 0.26f, 1f, 1.5f.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.size(7.dp).background(gold.akzentWarm, CircleShape))
+                        Text("WECKER AKTIV", fontFamily = IdeenSchriftFest, color = gold.akzentWarm,
+                            style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
+                    }
                     Text(alarm?.timeLabel.orEmpty(), fontFamily = IdeenSchriftFest, color = gold.textGedaempft,
                         style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
                 }
-                HorizontalDivider(color = gold.rahmen)
-                if (figur >= 90.dp) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Wecker3DFigur(now, figur, wackelnd) }
-                // Rollende Ziffern wie auf einer Anzeigetafel, dazu ein Signalglanz.
-                RollendeUhr(formatClock(now), uhrStil(contentWidth, 80f, zahlSchrift(),
+                HorizontalDivider(color = gold.heroKante)
+                if (figur >= 84.dp) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Wecker3DFigur(now, figur, wackelnd) }
+                RollendeUhr(formatClock(now), uhrStil((contentWidth - 32.dp).coerceAtLeast(80.dp), 76f, zahlSchrift(),
                         androidx.compose.ui.text.font.FontWeight.SemiBold, gold.primaer),
                     Modifier.glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true))
                 Text(name, style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
         else -> {
-            Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp)
-            // Raw size first: below 140 dp the ring is left out instead of being clamped up.
-            val factor = if (alarm?.photoRequired == true) 0.30f else 0.42f
-            val raw = minOf(contentWidth * 0.8f, contentHeight * factor)
-            val ring = if (raw < 140.dp) null else raw.coerceAtMost(300.dp)
+            Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
+            // Kompakter als bisher (0,34 statt 0,42), damit alle Schritt-Chips unter dem Text vollständig sichtbar bleiben.
+            val factor = if (alarm?.photoRequired == true) 0.26f else 0.34f
+            val raw = minOf(contentWidth * 0.68f, contentHeight * factor)
+            val ring = if (raw < 124.dp) null else raw.coerceAtMost(232.dp)
 
-            if (ring != null) Box(Modifier.size(ring), contentAlignment = Alignment.Center) {
+            if (ring != null) Box(
+                Modifier.size(ring)
+                    .drawBehind {
+                        drawCircle(
+                            Brush.radialGradient(
+                                listOf(gold.primaer.copy(alpha = if (gold.istDunkel) 0.16f else 0.12f), Color.Transparent),
+                                center = center,
+                                radius = size.minDimension * 0.56f,
+                            ),
+                            radius = size.minDimension * 0.56f,
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 WeckPuls(ringing = alarm != null, leaving = verlaesst, modifier = Modifier.matchParentSize())
-                Wecker3DFigur(now, ring * 0.66f, wackelnd)
+                Wecker3DFigur(now, ring * 0.68f, wackelnd)
             }
-            // Schlicht: rollende Ziffern, durch die alle paar Sekunden ein heller Goldglanz zieht.
             RollendeUhr(
-                formatClock(now), uhrStil(contentWidth, 72f, zahlSchrift(), null, gold.primaer),
+                formatClock(now), uhrStil(contentWidth, 68f, zahlSchrift(), null, gold.primaer),
                 Modifier.glanzLauf(staerke = if (gold.istDunkel) 0.8f else 0.55f,
                     farbe = if (gold.istDunkel) Color(0xFFFFF3D1) else gold.akzentWarm, nurSchrift = true),
             )
@@ -528,9 +627,9 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
     }
     // Der Text des Weckers, kurz und gut lesbar unter dem Namen.
     weckText(alarm)?.let {
-        Text(it, style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            maxLines = 5, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp))
+        Text(it, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 4, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 
@@ -604,11 +703,32 @@ private fun WeckSchritte(alarm: Alarm, step: String, variation: Int) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         alarm.steps.forEach { item ->
             val active = item.title == step
-            val fill by androidx.compose.animation.animateColorAsState(if (active) gold.primaer.copy(alpha = .22f) else Color.Transparent, weich(250), label = "schrittFlaeche")
-            val edge by androidx.compose.animation.animateColorAsState(if (active) gold.primaer else gold.textGedaempft.copy(alpha = .5f), weich(250), label = "schrittRand")
-            Box(Modifier.clip(shape).background(fill).border(1.dp, edge, shape).padding(horizontal = 12.dp, vertical = 6.dp)
-                .semantics { selected = active }) {
-                Text(item.title, color = if (active) gold.textPrimaer else gold.textGedaempft, style = MaterialTheme.typography.labelLarge)
+            val fill by androidx.compose.animation.animateColorAsState(
+                if (active) gold.primaer.copy(alpha = .24f) else gold.flaeche.copy(alpha = .45f),
+                weich(250), label = "schrittFlaeche",
+            )
+            val edge by androidx.compose.animation.animateColorAsState(
+                if (active) gold.primaer else gold.textGedaempft.copy(alpha = .42f),
+                weich(250), label = "schrittRand",
+            )
+            Row(
+                Modifier
+                    .then(if (active) Modifier.shadow(6.dp, shape, ambientColor = gold.primaer, spotColor = gold.primaer) else Modifier)
+                    .clip(shape)
+                    .background(fill)
+                    .border(if (active) 1.5f.dp else 1.dp, edge, shape)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .semantics { selected = active },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (active) Box(Modifier.size(6.dp).background(gold.primaer, CircleShape))
+                Text(
+                    item.title,
+                    color = if (active) gold.textPrimaer else gold.textGedaempft,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (active) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                )
             }
         }
     }
@@ -777,7 +897,25 @@ private fun WeckBestaetigung(result: RingResult?) {
         LocalGestalt.current.Hintergrund(Modifier.fillMaxSize())
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp),
             modifier = Modifier.padding(24.dp).graphicsLayer { val s = .94f + .06f * sicht.value; scaleX = s; scaleY = s }) {
-            Box(Modifier.size(120.dp).background(farbe, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(132.dp)
+                    .drawBehind {
+                        drawCircle(
+                            Brush.radialGradient(
+                                listOf(farbe.copy(alpha = 0.36f), Color.Transparent),
+                                center = center,
+                                radius = size.minDimension * 0.72f,
+                            ),
+                            radius = size.minDimension * 0.72f,
+                        )
+                    }
+                    .tiefenSchatten(farbe, Hoehe.dialog, CircleShape)
+                    .clip(CircleShape)
+                    .background(Brush.verticalGradient(listOf(farbe.heller(0.22f), farbe, farbe.dunkler(0.24f))))
+                    .glanzBogen(0.40f)
+                    .border(1.5f.dp, Color.White.copy(alpha = 0.50f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(if (schlummer) Icons.Default.Bedtime else Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(64.dp))
             }
             Text(if (schlummer) "Schlummert bis ${formatClock(done.snoozeUntil)}" else "Wecker aus",

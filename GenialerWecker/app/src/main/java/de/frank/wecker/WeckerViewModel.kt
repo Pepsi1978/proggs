@@ -326,7 +326,11 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 file.absolutePath to name
             } catch (e: Exception) { file.delete(); throw e }
         }
-        _draft.value?.takeIf { it.id == alarmId }?.let { change(it.copy(music = result.first, musicName = result.second, musicQuelle = quelle)) }
+        _draft.value?.takeIf { it.id == alarmId }?.let {
+            change(it.copy(music = result.first, musicName = result.second, musicQuelle = quelle))
+            message.value = if (quelle == "geraet") "Geräte-Weckton gewählt: ${result.second}"
+            else "MP3-Datei gewählt: ${result.second}"
+        }
     }
     fun referencePhoto(file: File) = runAction("Referenzfoto prüfen …") {
         val alarm = _draft.value ?: return@runAction

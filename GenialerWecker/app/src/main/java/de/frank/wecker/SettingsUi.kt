@@ -13,9 +13,21 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -24,6 +36,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +63,7 @@ import de.frank.genialeideen.ui.*
 import de.frank.genialeideen.ui.theme.*
 import de.frank.wecker.design.Design
 import de.frank.wecker.design.LocalGestalt
+import de.frank.wecker.design.tokensFuer
 import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 
 @Composable
@@ -108,29 +122,36 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(), bottom = 16.dp).navigationBarsPadding()) {
       DesignBlatt {
-       Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+       Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         val missing = permissions.count { !it.second }
+        val semantisch = LocalSemantisch.current
         // Every requirement sits next to the one button that fixes it; nothing to search for.
         fun fix(name: String) {
             if (!Weckbereitschaft.beheben(activity, name) { notifications.launch(Manifest.permission.POST_NOTIFICATIONS) })
                 vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen."
         }
-        // Alles erteilt: nur eine zugeklappte Zeile wie „Benachrichtigungen“. Fehlt etwas, steht die Karte offen.
-        // key() setzt den Klappzustand neu, sobald sich „fehlt etwas“ ändert.
+        EinstellungsGruppe("WECKEN & SCHUTZ")
+        // Alles erteilt: zugeklappt mit grünem „Bereit ✓“-Abzeichen; fehlt etwas, steht die Karte sofort offen.
         key(missing == 0) {
-        Section("Weckbereitschaft", collapsible = missing == 0, initiallyExpanded = missing > 0,
-            summary = if (missing == 0) "Alles bereit" else "$missing ${if (missing == 1) "Freigabe fehlt" else "Freigaben fehlen"}") {
+        Section(
+            title = "Weckbereitschaft",
+            collapsible = missing == 0,
+            initiallyExpanded = missing > 0,
+            status = if (missing == 0) "Bereit ✓" else "$missing offen",
+            statusFarbe = if (missing == 0) semantisch.erfolg else semantisch.warnung,
+            summary = if (missing == 0) "Klingelt auch gesperrt und ohne Internet" else "$missing ${if (missing == 1) "Freigabe fehlt" else "Freigaben fehlen"}",
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (missing == 0) Icons.Default.VerifiedUser else Icons.Default.NotificationsActive, null,
-                    tint = if (missing == 0) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
+                    tint = if (missing == 0) semantisch.erfolg else semantisch.warnung)
                 Text(if (missing == 0) "Alles bereit: Der Wecker klingelt auch gesperrt und ohne Internet."
                     else "$missing ${if (missing == 1) "Freigabe fehlt" else "Freigaben fehlen"}. Tippe jeweils auf „Erlauben“.",
                     Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium)
             }
             permissions.forEach { (name, ready) ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (ready) "✓" else "○", color = if (ready) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
-                    Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else LocalSemantisch.current.warnung)
+                    Text(if (ready) "✓" else "○", color = if (ready) semantisch.erfolg else semantisch.warnung)
+                    Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else semantisch.warnung)
                     if (ready) Text("erteilt", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
                     else StillerKnopf("Erlauben", { fix(name) }, Modifier.semantics { contentDescription = "$name erlauben" }, hervorgehoben = true)
                 }
@@ -143,44 +164,88 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         }
         BenachrichtigungenKarte(vm, activity)
+        EinstellungsGruppe("OPTIK & BEDIENUNG")
         var ausrichtung by remember(revision) { mutableStateOf(settings.ausrichtung) }
         var design by remember(revision) { mutableStateOf(settings.design) }
         val modus by vm.theme.collectAsStateWithLifecycle()
         var statuszeile by remember(revision) { mutableStateOf(settings.statuszeileSichtbar) }
-        val modusOptionen = listOf("light" to "Hell", "dark" to "Dunkel", "system" to "Automatisch nach der Sonne")
-        Section("Darstellung", collapsible = true, initiallyExpanded = false,
-            summary = "${Design.von(design).anzeige} · ${modusOptionen.find { it.first == modus }?.second ?: "Hell"} · " +
-                (Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch")) {
-            // Direkt anklickbare Punkte statt großer Knöpfe mit Auswahlfenster — und kaum Erklärtext.
-            AuswahlPunkte("Design", design, Design.entries.map { it.id to it.anzeige }) {
-                design = it; settings.design = it; vm.settingsRevision.value++
-            }
-            // Jedes Design hat seinen eigenen Regler: Kopfkarte, Weckerkarten und Einstellungskarten
-            // von deckend bis ganz durchsichtig. Gezeigt wird der Regler des gerade gewählten Designs;
-            // beim Umschalten erscheint dessen eigener Wert.
+        val modusOptionen = listOf("light" to "Hell", "dark" to "Dunkel", "system" to "Nach Sonne")
+        val deckkraftJeDesign by settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
+        val designObj = Design.von(design)
+        val deckkraftAktuell = deckkraftJeDesign[design] ?: 100
+        Section(
+            title = "Darstellung",
+            collapsible = true,
+            initiallyExpanded = true,
+            status = designObj.anzeige,
+            summary = "${designObj.anzeige} · ${modusOptionen.find { it.first == modus }?.second ?: "Hell"} · Deckkraft $deckkraftAktuell % · " +
+                (Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch"),
+        ) {
+            Text("Design-Welt", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            DesignVorschauKarten(
+                gewaehlt = design,
+                dunkel = wirksamesTheme(modus) == "dark",
+                aufWahl = { neu ->
+                    design = neu; settings.design = neu; vm.settingsRevision.value++
+                },
+            )
             HorizontalDivider(color = LocalGold.current.rahmen)
-            val deckkraftJeDesign by settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
-            val designName = Design.von(design).anzeige
-            ValueSlider("Deckkraft der Karten · $designName", deckkraftJeDesign[design] ?: 100, 0..100, "%") {
-                settings.setzeKartenDeckkraft(design, it)
+            Text("Farbmodus", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                modusOptionen.forEach { (id, name) ->
+                    Chip3D(modus == id, { settings.theme = id }, name)
+                }
             }
-            Text("Gilt nur für $designName — jedes Design merkt sich seinen eigenen Wert. 100 % deckend, 0 % ganz durchsichtig.",
+            HorizontalDivider(color = LocalGold.current.rahmen)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Deckkraft der Karten · ${designObj.anzeige}", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+                Text("$deckkraftAktuell %", style = MaterialTheme.typography.titleSmall, fontFamily = zahlSchrift(), fontWeight = FontWeight.Bold, color = LocalGold.current.primaer)
+            }
+            Regler3D(
+                wert = deckkraftAktuell.toFloat(),
+                aufAenderung = { settings.setzeKartenDeckkraft(design, it.roundToInt()) },
+                modifier = Modifier.semantics {
+                    contentDescription = "Deckkraft der Karten für ${designObj.anzeige}"
+                    stateDescription = "$deckkraftAktuell Prozent"
+                },
+                bereich = 0f..100f,
+                stufen = 99,
+            )
+            Text("Gilt nur für ${designObj.anzeige} — jedes Design merkt sich seinen eigenen Wert. 100 % deckend, 0 % ganz durchsichtig.",
                 style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             HorizontalDivider(color = LocalGold.current.rahmen)
-            AuswahlPunkte("Modus", modus, modusOptionen) { settings.theme = it }
-            HorizontalDivider(color = LocalGold.current.rahmen)
-            AuswahlPunkte("Ausrichtung", ausrichtung, Ausrichtung.optionen) {
-                ausrichtung = it; settings.ausrichtung = it; Ausrichtung.anwenden(activity, it); vm.settingsRevision.value++
+            Text("Ausrichtung", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Ausrichtung.optionen.forEach { (id, name) ->
+                    Chip3D(ausrichtung == id, {
+                        ausrichtung = id; settings.ausrichtung = id; Ausrichtung.anwenden(activity, id); vm.settingsRevision.value++
+                    }, name)
+                }
             }
             HorizontalDivider(color = LocalGold.current.rahmen)
-            Toggle("Statuszeile anzeigen", statuszeile) { statuszeile = it; settings.statuszeileSichtbar = it }
+            Toggle("Statuszeile oben anzeigen", statuszeile) { statuszeile = it; settings.statuszeileSichtbar = it }
         }
-        Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
-            TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"
-            TtsProvider.MODELL.id -> "Supertonic · ${ModellKatalog.finde(settings.modellStimme)?.let(ModellKatalog::name) ?: "Sophie"}"
-            TtsProvider.GEMINI_FLASH.id -> "Gemini 3.8 Flash"; TtsProvider.GEMINI_LITE.id -> "Gemini 3.8 Flash-Lite"
-            TtsProvider.AZURE.id -> "Azure Neural"; else -> "Edge"
-        }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
+        EinstellungsGruppe("STIMMEN & INHALTE")
+        val anbieterKurz = when (provider) {
+            TtsProvider.GOOGLE_CLOUD.id -> "Google"
+            TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"
+            TtsProvider.MODELL.id -> "Supertonic"
+            TtsProvider.GEMINI_FLASH.id -> "Gemini Flash"
+            TtsProvider.GEMINI_LITE.id -> "Gemini Lite"
+            TtsProvider.AZURE.id -> "Azure"
+            else -> "Edge"
+        }
+        Section(
+            title = "Vorlesen · Stimmen & Tempo",
+            collapsible = true,
+            status = anbieterKurz,
+            summary = "${when (provider) {
+                TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"
+                TtsProvider.MODELL.id -> "Supertonic · ${ModellKatalog.finde(settings.modellStimme)?.let(ModellKatalog::name) ?: "Sophie"}"
+                TtsProvider.GEMINI_FLASH.id -> "Gemini 3.8 Flash"; TtsProvider.GEMINI_LITE.id -> "Gemini 3.8 Flash-Lite"
+                TtsProvider.AZURE.id -> "Azure Neural"; else -> "Edge"
+            }} · Tempo ${"%.2f".format(rate)}× · Standard für alle Wecker",
+        ) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(TtsProvider.QWEN_CLONE, TtsProvider.MODELL, TtsProvider.GOOGLE_CLOUD, TtsProvider.GEMINI_FLASH,
                     TtsProvider.GEMINI_LITE, TtsProvider.EDGE, TtsProvider.AZURE).forEach { item ->
@@ -247,21 +312,21 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                     }
                 }
             }
+            val haptikStimme = LocalHapticFeedback.current
             gefiltert.forEach { (id, label) ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    // Auswahlpunkt und Name sind eine gemeinsame Fläche von mindestens 48 dp; der Favoritenstern
-                    // liegt bewusst daneben und wählt die Stimme deshalb nicht aus.
                     val favorit = id in settings.favoriteTtsVoices
                     fun favoritUmschalten() {
+                        haptikStimme.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         settings.favoriteTtsVoices = if (favorit) settings.favoriteTtsVoices - id else settings.favoriteTtsVoices + id
                         vm.settingsRevision.value++
                     }
-                    // Tippen wählt, langes Drücken markiert die Stimme als Favorit (oder nimmt sie heraus).
                     val istGewaehlt = selected == id
                     Row(Modifier.weight(1f).heightIn(min = 48.dp).semantics { this.selected = istGewaehlt }.combinedClickable(
                         interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton,
                         onLongClickLabel = if (favorit) "Favorit entfernen" else "Als Favorit markieren",
                         onLongClick = { favoritUmschalten() }) {
+                        haptikStimme.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         selected = id
                         when (provider) {
                             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = id
@@ -306,22 +371,30 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Text("Beim Speichern werden sechs Varianten derselben Stimme erzeugt, mit behutsamen Tempo-Unterschieden. Beim Wecken läuft Variante 1 bis 6, dann wieder 1. Absätze werden vorgeladen. Bereits fertiges Audio bleibt bis zum erfolgreichen Abschluss verfügbar.", style = MaterialTheme.typography.bodySmall)
         }
         val ideasAt by vm.ideasAt.collectAsStateWithLifecycle()
-        Section("Geniale Ideen · Offene Ideen", collapsible = true,
-            summary = "${ideas.size} offene ${if (ideas.size == 1) "Idee" else "Ideen"} · ${if (ideasAt > 0) "Stand ${formatAt(ideasAt)}" else "noch nicht abgeglichen"}") {
-            // Opening the section syncs, like opening the former ideas page did.
+        val ideasDisabledTop by vm.ideasDisabled.collectAsStateWithLifecycle()
+        val aktiveIdeenTop = remember(ideas, ideasDisabledTop) { ideas.count { it.id !in ideasDisabledTop } }
+        Section(
+            title = "Geniale Ideen · Offene Ideen",
+            collapsible = true,
+            status = "${aktiveIdeenTop}/${ideas.size}",
+            summary = "${ideas.size} offene ${if (ideas.size == 1) "Idee" else "Ideen"} · ${if (ideasAt > 0) "Stand ${formatAt(ideasAt)}" else "noch nicht abgeglichen"}",
+        ) {
             LaunchedEffect(Unit) { vm.syncIdeasStill() }
             Text("Nur offene Ideen, in derselben Reihenfolge. Die Originale bleiben in Geniale Ideen. Dein Wecker erhält eine lokale Lesekopie. Beide Apps müssen mit demselben Schlüssel signiert sein.", style = MaterialTheme.typography.bodySmall)
             GoldKnopf("Jetzt abgleichen", vm::syncIdeas)
             if (ideasAt > 0) Text("Stand: ${formatAt(ideasAt)}", style = MaterialTheme.typography.bodySmall)
             if (ideas.isEmpty()) Leerzustand("✧", "Noch keine offenen Ideen", "Öffne Geniale Ideen und lege dort eine offene Idee an. Beide Apps benötigen den aktuellen Stand.")
-            val ideasDisabled by vm.ideasDisabled.collectAsStateWithLifecycle()
+            val haptikIdee = LocalHapticFeedback.current
             if (ideas.isNotEmpty()) Text("Häkchen entfernen, damit eine Idee beim Wecken nicht vorgelesen wird.",
                 style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             ideas.forEachIndexed { index, idea ->
                 if (index > 0) HorizontalDivider(color = LocalGold.current.textGedaempft.copy(alpha = .3f))
-                val aktiv = idea.id !in ideasDisabled
+                val aktiv = idea.id !in ideasDisabledTop
                 Row(Modifier.fillMaxWidth().toggleable(aktiv, interactionSource = null, indication = null,
-                    role = androidx.compose.ui.semantics.Role.Checkbox) { vm.setIdeaActive(idea.id, it) },
+                    role = androidx.compose.ui.semantics.Role.Checkbox) {
+                        haptikIdee.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        vm.setIdeaActive(idea.id, it)
+                    },
                     verticalAlignment = Alignment.Top) {
                     Checkbox(aktiv, null, colors = CheckboxDefaults.colors(checkedColor = LocalGold.current.primaer,
                         uncheckedColor = LocalGold.current.textGedaempft, checkmarkColor = LocalGold.current.aufPrimaer))
@@ -337,16 +410,30 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             GoldKnopf("Spracheinstellungen übernehmen", { copySettings = true })
             Text("Übernimmt die dort gewählte Stimme, das Tempo sowie Google-, Alibaba- und Groq-Schlüssel. Danach kannst du die Stimme im Wecker unabhängig auswählen.", style = MaterialTheme.typography.bodySmall)
         }
+        EinstellungsGruppe("ERWEITERT & KI")
         // Die Zusammenfassung spricht ausschließlich über gespeicherte Schlüssel; ein Entwurf wird als offen
         // benannt und nie als vorhandener Schlüssel dargestellt.
         val offeneSchluessel = geminiFreiEntwurf.trim() != settings.geminiTtsKeyFrei.trim() ||
             geminiBezahltEntwurf.trim() != settings.geminiTtsKeyBezahlt.trim() || azureEntwurf.trim() != settings.azureTtsKey.trim() ||
             googleEntwurf.trim() != settings.googleTtsApiKey.trim() ||
             qwenEntwurf.trim() != settings.qwenTtsApiKey.trim() || groqEntwurf.trim() != settings.groqApiKey.trim()
-        Section("Sprachschlüssel", collapsible = true, summary = listOf("Google" to settings.googleTtsApiKey, "Gemini" to (settings.geminiTtsKeyFrei + settings.geminiTtsKeyBezahlt),
-            "Azure" to settings.azureTtsKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
-            .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "fehlt" else "✓"}" } +
-            if (offeneSchluessel) " · ungespeicherte Änderung" else "") {
+        val eingerichteteSchluessel = listOf(
+            settings.googleTtsApiKey,
+            settings.geminiTtsKeyFrei + settings.geminiTtsKeyBezahlt,
+            settings.azureTtsKey,
+            settings.qwenTtsApiKey,
+            settings.groqApiKey,
+        ).count { it.isNotBlank() }
+        Section(
+            title = "Sprachschlüssel",
+            collapsible = true,
+            status = if (offeneSchluessel) "Offen" else "$eingerichteteSchluessel/5 aktiv",
+            statusFarbe = if (offeneSchluessel) semantisch.warnung else if (eingerichteteSchluessel > 0) semantisch.erfolg else LocalGold.current.textGedaempft,
+            summary = listOf("Google" to settings.googleTtsApiKey, "Gemini" to (settings.geminiTtsKeyFrei + settings.geminiTtsKeyBezahlt),
+                "Azure" to settings.azureTtsKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
+                .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "–" else "✓"}" } +
+                if (offeneSchluessel) " · ungespeicherte Änderung" else "",
+        ) {
                 SecretField("Google / Chirp-3-HD-Schlüssel", settings.googleTtsApiKey, googleEntwurf, { googleEntwurf = it }) { settings.googleTtsApiKey = it; vm.settingsChanged() }
                 SecretField("Alibaba / DashScope-Schlüssel", settings.qwenTtsApiKey, qwenEntwurf, { qwenEntwurf = it }) { settings.qwenTtsApiKey = it; vm.settingsChanged() }
                 SecretField("Groq-Schlüssel", settings.groqApiKey, groqEntwurf, { groqEntwurf = it }) { settings.groqApiKey = it; vm.settingsChanged() }
@@ -398,14 +485,25 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         var erkennungOffen by remember { mutableStateOf(false) }
         var erkennungStand by remember { mutableIntStateOf(0) }
         val lokalesModell = remember(erkennungStand, erkennungOffen) { Erkennung.aktiv(activity) }
-        Section("Spracheingabe · Offline (Jarvis)", collapsible = true, summary = if (ParakeetUeberJarvis.gewaehlt(activity))
-            "Parakeet über Jarvis · offline" else "Aus · Parakeet über Jarvis wählen") {
+        val parakeetAktiv = ParakeetUeberJarvis.gewaehlt(activity)
+        Section(
+            title = "Spracheingabe · Offline (Jarvis)",
+            collapsible = true,
+            status = if (parakeetAktiv) "Aktiv" else "Aus",
+            statusFarbe = if (parakeetAktiv) semantisch.erfolg else LocalGold.current.textGedaempft,
+            summary = if (parakeetAktiv) "Parakeet über Jarvis · offline" else "Aus · Parakeet über Jarvis wählen",
+        ) {
             Text("Parakeet läuft in Jarvis, ohne Internet und ohne Schlüssel. Ist es eingeschaltet, hat es Vorrang vor Groq und dem Whisper auf dem Handy.",
                 style = MaterialTheme.typography.bodySmall)
             de.frank.module.transkriptionsmodul.ParakeetEinstellungen(geaendert = { vm.settingsRevision.value++ })
         }
-        Section("Spracheingabe", collapsible = true, summary = if (ParakeetUeberJarvis.gewaehlt(activity)) "Parakeet über Jarvis hat Vorrang" else if (diktatWeg == "lokal")
-            "Auf dem Handy · ${lokalesModell?.modellName ?: "Modell noch nicht geladen"}" else "Groq · Whisper ${GroqTranscriber.modellName(settings.groqModell)} (API-Schlüssel)") {
+        Section(
+            title = "Spracheingabe",
+            collapsible = true,
+            status = if (parakeetAktiv) "Jarvis" else if (diktatWeg == "lokal") "Lokal" else "Groq",
+            summary = if (parakeetAktiv) "Parakeet über Jarvis hat Vorrang" else if (diktatWeg == "lokal")
+                "Auf dem Handy · ${lokalesModell?.modellName ?: "Modell noch nicht geladen"}" else "Groq · Whisper ${GroqTranscriber.modellName(settings.groqModell)} (API-Schlüssel)",
+        ) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip3D(diktatWeg == "groq", { diktatWeg = "groq"; settings.diktatWeg = "groq"; vm.settingsRevision.value++ }, "Groq · API-Schlüssel")
                 Chip3D(diktatWeg == "lokal", { diktatWeg = "lokal"; settings.diktatWeg = "lokal"; vm.settingsRevision.value++ }, "Auf dem Handy · Whisper")
@@ -438,7 +536,13 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
         }
         if (erkennungOffen) ErkennungDialog { erkennungOffen = false; erkennungStand++ }
-        Section("KI-Textverbesserung", collapsible = true, summary = if (vm.auth.isConnected) "ChatGPT verbunden" else "ChatGPT-Anmeldung einrichten") {
+        Section(
+            title = "KI-Textverbesserung",
+            collapsible = true,
+            status = if (vm.auth.isConnected) "Verbunden ✓" else "Nicht verbunden",
+            statusFarbe = if (vm.auth.isConnected) semantisch.erfolg else LocalGold.current.textGedaempft,
+            summary = if (vm.auth.isConnected) "ChatGPT verbunden" else "ChatGPT-Anmeldung einrichten",
+        ) {
             Text(if (vm.auth.isConnected) "ChatGPT verbunden: ${vm.auth.email.orEmpty()}" else "ChatGPT noch nicht verbunden")
             if (vm.auth.isConnected) StillerKnopf("Abmelden", { vm.auth.logout(); vm.settingsRevision.value++ })
             else GoldKnopf("Mit ChatGPT anmelden", { vm.login(activity) }, aktiviert = busy.isBlank())
@@ -493,6 +597,7 @@ private fun SecretField(label: String, gespeichert: String, text: String, onText
     }
     // Eigene Zeile, damit der Hinweis auch bei großer Schrift vollständig lesbar bleibt.
     if (geaendert) Text("Noch nicht gespeichert", style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+    else if (gespeichert.isNotBlank()) Text("✓ Verschlüsselt gespeichert", style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.erfolg)
 }
 
 @Composable
@@ -525,10 +630,25 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
         try { activity.startActivity(intent) }
         catch (e: Exception) { vm.message.value = "Die Android-Einstellung konnte nicht geöffnet werden (${e.javaClass.simpleName})." }
     }
-    Section("Benachrichtigungen", collapsible = true, initiallyExpanded = false,
+    val semantisch = LocalSemantisch.current
+    Section(
+        title = "Benachrichtigungen",
+        collapsible = true,
+        initiallyExpanded = false,
+        status = when {
+            on && blocked != null -> "Gesperrt"
+            on -> "Aktiv"
+            else -> "Aus"
+        },
+        statusFarbe = when {
+            on && blocked != null -> semantisch.warnung
+            on -> semantisch.erfolg
+            else -> LocalGold.current.textGedaempft
+        },
         summary = "Schlafenszeit-Erinnerung ${if (on) SchlafErinnerung.leadMinutes(context).let { if (it == 0) "zur Schlafenszeit" else "$it Min. vorher" } else "aus"}" +
             "${if (on && blocked != null) " · gesperrt" else ""}",
-        error = if (on && blocked != null) "Die Erinnerung ist eingeschaltet, wird von Android aber nicht angezeigt." else null) {
+        error = if (on && blocked != null) "Die Erinnerung ist eingeschaltet, wird von Android aber nicht angezeigt." else null,
+    ) {
         Toggle("Schlafenszeit-Erinnerung", on) { checked ->
             // The switch shows the stored state only; a failed write keeps the old state and says so.
             val stored = SchlafErinnerung.setEnabled(context, checked)
@@ -676,17 +796,150 @@ private fun SchlafTonWahl() {
 }
 
 
-/** Eine kleine Gruppe direkt anklickbarer Auswahlpunkte mit Überschrift. */
+/** Ruhige Gruppenüberschrift zur klaren Gliederung der Einstellungen. */
 @Composable
-private fun AuswahlPunkte(titel: String, gewaehlt: String, optionen: List<Pair<String, String>>, waehlen: (String) -> Unit) {
-    Text(titel, style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-    optionen.forEach { (id, name) ->
-        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).selectable(id == gewaehlt, interactionSource = null, indication = null,
-            role = androidx.compose.ui.semantics.Role.RadioButton) { if (id != gewaehlt) waehlen(id) },
-            verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(id == gewaehlt, null)
-            Text(name, Modifier.padding(start = 8.dp))
+private fun EinstellungsGruppe(titel: String) {
+    val gold = LocalGold.current
+    Row(
+        Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            titel,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.6.sp,
+            ),
+            color = gold.primaer,
+        )
+        HorizontalDivider(Modifier.weight(1f), color = gold.primaer.copy(alpha = 0.25f))
+    }
+}
+
+/**
+ * Visuelle 3D-Vorschaukarten für die vier Design-Welten: Jede Karte zeigt ihre echte Farbwelt,
+ * Eckenform, Akzentfarbe und eine Mini-Uhrvorschau – sofort erkennbar und haptisch umschaltbar.
+ */
+@Composable
+private fun DesignVorschauKarten(
+    gewaehlt: String,
+    dunkel: Boolean,
+    aufWahl: (String) -> Unit,
+) {
+    val haptik = LocalHapticFeedback.current
+    val gold = LocalGold.current
+    val paare = Design.entries.chunked(2)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        paare.forEach { reihe ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                reihe.forEach { design ->
+                    val aktiv = design.id == gewaehlt
+                    val palette = de.frank.wecker.design.paletteFuer(design, dunkel)
+                    val tokens = tokensFuer(design)
+                    val form = RoundedCornerShape(tokens.karteRadius.coerceIn(6.dp, 20.dp))
+                    val stichwort = when (design) {
+                        Design.SCHLICHT -> "Gold & Glas"
+                        Design.MORGENRUHE -> "Leinen & Achse"
+                        Design.TRAUMRAUM -> "Kuppel & Glut"
+                        Design.ORBIT -> "Instrument"
+                    }
+                    Box(
+                        Modifier.weight(1f)
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = "${design.anzeige}: ${design.beschreibung}"
+                            }
+                            .selectable(
+                                selected = aktiv,
+                                role = androidx.compose.ui.semantics.Role.RadioButton,
+                                interactionSource = null,
+                                indication = null,
+                                onClick = {
+                                    haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (!aktiv) aufWahl(design.id)
+                                },
+                            )
+                            .shadow(
+                                elevation = if (aktiv) 8.dp else 3.dp,
+                                shape = form,
+                                ambientColor = if (aktiv) palette.primaer else Color.Black,
+                                spotColor = if (aktiv) palette.primaer else Color.Black,
+                            )
+                            .clip(form)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        palette.heroGrund.heller(if (dunkel) 0.10f else 0.04f),
+                                        palette.heroGrund,
+                                        palette.flaeche.dunkler(if (dunkel) 0.12f else 0.04f),
+                                    ),
+                                ),
+                            )
+                            .glanzBogen(deckung = if (dunkel) 0.12f else 0.24f)
+                            .border(
+                                width = if (aktiv) 2.dp else 1.dp,
+                                color = if (aktiv) palette.primaer else palette.rahmen,
+                                shape = form,
+                            )
+                            .padding(12.dp),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                // Drei Farbpunkte aus der echten Design-Palette
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Box(Modifier.size(11.dp).clip(CircleShape).background(palette.primaer).border(0.8f.dp, Color.White.copy(alpha = 0.45f), CircleShape))
+                                    Box(Modifier.size(11.dp).clip(CircleShape).background(palette.akzentWarm))
+                                    Box(Modifier.size(11.dp).clip(CircleShape).background(palette.hintergrund).border(0.8f.dp, palette.rahmen, CircleShape))
+                                }
+                                Spacer(Modifier.weight(1f))
+                                if (aktiv) {
+                                    Box(
+                                        Modifier.size(20.dp).clip(CircleShape).background(palette.primaer),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(Icons.Default.Check, null, tint = palette.aufPrimaer, modifier = Modifier.size(13.dp))
+                                    }
+                                }
+                            }
+                            Text(
+                                "06:30",
+                                Modifier.clearAndSetSemantics { },
+                                fontFamily = if (design == Design.ORBIT) IdeenSchriftFest else if (design == Design.SCHLICHT) IdeenSchriftBetont else IdeenSchrift,
+                                fontWeight = when (design) {
+                                    Design.TRAUMRAUM -> FontWeight.Bold
+                                    Design.ORBIT -> FontWeight.SemiBold
+                                    Design.MORGENRUHE -> FontWeight.Light
+                                    else -> FontWeight.Medium
+                                },
+                                fontSize = 22.sp,
+                                color = palette.primaer,
+                                maxLines = 1,
+                            )
+                            Text(
+                                design.anzeige,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = palette.textPrimaer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                stichwort,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = palette.textGedaempft,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
         }
+        Text(
+            Design.von(gewaehlt).beschreibung,
+            style = MaterialTheme.typography.bodySmall,
+            color = gold.textGedaempft,
+        )
     }
 }
 

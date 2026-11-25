@@ -1,5 +1,6 @@
 package de.frank.wecker.design
 
+import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
@@ -274,3 +275,35 @@ fun lichtKanteDeck(staerke: Float, deckkraft: Float): androidx.compose.ui.graphi
 
 /** Eine Farbe mit der Kartendeckkraft multipliziert. */
 fun Color.deck(deckkraft: Float): Color = copy(alpha = alpha * deckkraft)
+
+/**
+ * Plastische 3D-Fase für die vier Hero-Köpfe: deckender Außenrand, doppelte Licht-/Schattenkante
+ * (oben hell, unten tief) und bei voller Deckkraft eine feine innere Lichtkante — niemals über
+ * `sweepGradient` (ungleichmäßiger Verlauf an den Kanten), immer als präziser linearer Schliff.
+ */
+fun androidx.compose.ui.Modifier.heroFase3D(
+    form: androidx.compose.ui.graphics.Shape,
+    kante: Color,
+    licht: Color,
+    lichtAlpha: Float,
+    schattenAlpha: Float,
+    deckkraft: Float,
+    staerke: Dp = 1.25f.dp,
+): androidx.compose.ui.Modifier {
+    if (deckkraft <= 0f) return this
+    return this
+        .border(staerke, kante.deck(deckkraft), form)
+        .border(
+            staerke,
+            androidx.compose.ui.graphics.Brush.linearGradient(
+                listOf(
+                    licht.copy(alpha = lichtAlpha * deckkraft),
+                    licht.copy(alpha = lichtAlpha * 0.28f * deckkraft),
+                    Color.Transparent,
+                    Color.Black.copy(alpha = schattenAlpha * 0.45f * deckkraft),
+                    Color.Black.copy(alpha = schattenAlpha * deckkraft),
+                ),
+            ),
+            form,
+        )
+}
