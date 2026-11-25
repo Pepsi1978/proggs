@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Review-Nachbesserung des Bereichs Erledigt der Handy-Heute-Karte; die Windows-Karte Aufgaben heute ist reiner Text ohne Abhaken",
+ "review": "",
+ "tests": "",
  "host": "Power-PC",
- "ziel": "power",
- "zeit": "2026-11-25T11:19:47+01:00",
- "versuch": 1
+ "zeit": "2026-11-25T11:24:14+01:00"
 }
