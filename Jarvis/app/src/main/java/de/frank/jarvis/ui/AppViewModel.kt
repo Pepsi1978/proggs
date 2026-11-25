@@ -2482,6 +2482,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             fertig()
             return
         }
+        // Jarvis hört gleich zu: eine laufende Mentalität anhalten (nicht beenden), damit sie nicht ins Mikrofon spricht.
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.zurueckstellen()
         // War Jarvis beim Weckwort schon sichtbar vorn, geht das offene Gespräch weiter. Eine dort noch laufende Antwort
         // weicht der neuen Frage (sonst verwirft [sende] sie); ein Programmierauftrag läuft davon unabhängig weiter.
         // Abgebrochen wird erst in [sende], wenn feststeht, dass der Satz kein Wechsel der Session ist: Sonst endete die
@@ -3536,6 +3538,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         // Das Aufnahme-Signal gehört zu diesem ViewModel: Endet es mitten in einer Aufnahme, blieben Ansagen sonst für immer still.
         de.frank.jarvis.speech.GespraechsFokus.aufnahme = false
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.mikrofonBelegt = { false }
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
         if (de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen === gespraecheVomAbgleich) de.frank.jarvis.abgleich.GedaechtnisAbgleich.beiGespraechen = null
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.aendern === programmierAendern) de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = null
@@ -3739,6 +3742,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val mitnahmeHier: Boolean get() = mitnahme?.let { it.sitzung == sitzungId } == true
     /** Die mitgenommene Aufnahme (oder ein Abzweig nach ihrem Ende) hält das eine Mikrofon. */
     private var mikroGeteilt = false
+
+    // Weiter in der Mentalität wartet, solange eine Aufnahme oder ein Gespräch das Mikrofon nutzt.
+    init { de.frank.jarvis.mentalitaet.MentalitaetSpieler.mikrofonBelegt = { nimmtAuf || schreibtMit || holtMikro || mikroGeteilt } }
     /** Byte-Stelle, ab der die laufende Aufnahme aus dem Strom der mitgenommenen schneidet; -1 = eigene Aufnahme. */
     private var abzweigAb = -1
     /** Abzweige, die ihren Teil noch nicht herausgeschnitten haben; so lange bleibt das Mikrofon an. */

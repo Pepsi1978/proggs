@@ -442,6 +442,12 @@ object MentalitaetSpieler {
     private var letzteNummer = 1
     private var letzteGesamt = 1
 
+    /** Von der App gesetzt: läuft gerade eine Aufnahme oder ein Gespräch? Dann setzt Weiter nicht fort. */
+    @Volatile var mikrofonBelegt: () -> Boolean = { false }
+
+    private fun vorleserAktiv(): Boolean =
+        Vorleser.aktuell()?.stand?.value?.zustand.let { it != null && it != VorleseZustand.AUS }
+
     /** Darf der Ton gerade laufen? Gemeinsames Tor für Pause-Knopf und Tonfokus. */
     private fun darfSpielen() = !pausiertDurchFokus && !manuellPausiert.value
 
@@ -622,7 +628,8 @@ object MentalitaetSpieler {
         // Angehalten braucht die CPU nicht wach zu bleiben; Weiter holt die Sperre wieder.
         wachLos()
         _stand.value = _stand.value.copy(pausiert = true)
-        appContext?.let { VorleseDienst.aktualisiere(it, "Mentalität", letzteNummer, letzteGesamt, pausiert = true) }
+        // Übernimmt gerade ein anderes Vorlesen, gehört die Meldung ihm; die der Mentalität kommt nach dessen Ende zurück.
+        if (!vorleserAktiv()) appContext?.let { VorleseDienst.aktualisiere(it, "Mentalität", letzteNummer, letzteGesamt, pausiert = true) }
         Logbuch.sprache("Mentalität pausiert", "phase=${_stand.value.phase}")
     }
 
@@ -631,14 +638,23 @@ object MentalitaetSpieler {
         if (Looper.myLooper() != Looper.getMainLooper()) { haupt.post { fortsetzen() }; return }
         if (!aktiv || !manuellPausiert.value) return
         val app = appContext
-        // Während der Pause gestartete Ausgaben anderer Funktionen beenden, damit sich nichts überlagert.
-        runCatching { Vorleser.aktuell()?.takeIf { it.stand.value.zustand != VorleseZustand.AUS }?.stopp(dienstBeenden = false) }
-        if (AtemSitzung.offen) runCatching { AtemSitzung.beenden() }
-        // Ging der Tonfokus in der Pause an eine andere Ausgabe, wird er jetzt neu geholt.
-        if (fokusAnfrage == null && app != null && !fokusHolen(app)) {
-            _stand.value = _stand.value.copy(fehler = "Tonfokus wurde verweigert (läuft gerade ein Anruf?).")
+        // Läuft eine Aufnahme oder ein Gespräch, spräche die Mentalität ins Mikrofon: erst danach weiter.
+        if (runCatching { mikrofonBelegt() }.getOrDefault(false)) {
+            _stand.value = _stand.value.copy(fehler = "Erst die Aufnahme beenden, dann geht es weiter.")
             return
         }
+        // Hat in der Pause eine andere Ausgabe den Tonfokus übernommen, wird er zuerst neu geholt; erst wenn das klappt,
+        // weichen die anderen Ausgaben (sonst wäre z. B. die Atemübung umsonst beendet).
+        if (app != null && (fokusAnfrage == null || pausiertDurchFokus)) {
+            pausiertDurchFokus = false
+            if (!fokusHolen(app)) {
+                _stand.value = _stand.value.copy(fehler = "Tonfokus wurde verweigert (läuft gerade ein Anruf?).")
+                return
+            }
+        }
+        // Während der Pause gestartete Ausgaben anderer Funktionen beenden (samt ihrem Tonfokus), damit sich nichts überlagert.
+        runCatching { Vorleser.aktuell()?.takeIf { it.stand.value.zustand != VorleseZustand.AUS }?.stopp() }
+        if (AtemSitzung.offen) runCatching { AtemSitzung.beenden() }
         manuellPausiert.value = false
         app?.let { wachErneuern(it) }
         if (!pausiertDurchFokus) {

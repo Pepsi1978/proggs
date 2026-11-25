@@ -140,13 +140,14 @@ class Vorleser(
         // App zum Absturz (ForegroundServiceDidNotStartInTimeException).
         if (vorabQuelle != null) vorabVerdraengt = vorabQuelle
         stopp(dienstBeenden = false)
-        de.frank.jarvis.mentalitaet.MentalitaetSpieler.zurueckstellen()
         val text = SprechText.fuerStimme(rohText)
         val absaetze = SprechText.absaetze(text)
         if (absaetze.isEmpty()) {
             _stand.value = VorleseStand(fehler = "Hier gibt es nichts zum Vorlesen.")
             return
         }
+        // Eine laufende Mentalität nur anhalten, nie beenden: Sie bleibt samt Stelle erhalten.
+        de.frank.jarvis.mentalitaet.MentalitaetSpieler.zurueckstellen()
         _stand.value = VorleseStand(
             zustand = VorleseZustand.LAEDT,
             quelle = quelle,

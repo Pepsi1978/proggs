@@ -64,8 +64,8 @@ class VorleseDienst : Service() {
                 }
 
                 override fun onStop() {
-                    Vorleser.aktuell()?.stopp()
-                    de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                    // Stopp gilt dem gerade laufenden Vorlesen; eine darunter pausierte Mentalität bleibt erhalten.
+                    if (mentalitaetSteuert()) de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp() else Vorleser.aktuell()?.stopp()
                 }
             })
             isActive = true
@@ -122,8 +122,13 @@ class VorleseDienst : Service() {
             }
             VorleseAktion.WEITER -> if (mentalitaetSteuert()) de.frank.jarvis.mentalitaet.MentalitaetSpieler.fortsetzen() else Vorleser.aktuell()?.weiter()
             VorleseAktion.STOPP -> {
-                Vorleser.aktuell()?.stopp()
+                // Läuft ein Vorlesen über einer pausierten Mentalität, endet nur das Vorlesen; die Meldung der Mentalität kehrt zurück.
+                if (!mentalitaetSteuert() && de.frank.jarvis.mentalitaet.MentalitaetSpieler.aktiv) {
+                    Vorleser.aktuell()?.stopp()
+                    return START_NOT_STICKY
+                }
                 de.frank.jarvis.mentalitaet.MentalitaetSpieler.stopp()
+                Vorleser.aktuell()?.stopp()
                 halteAn()
                 return START_NOT_STICKY
             }
