@@ -4118,6 +4118,8 @@ private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
     GoldKnopf("${sonnenTitel(ereignis)} · ${versatzKurz(versatz)}", { wahlOffen = true }, Modifier.fillMaxWidth())
     if (wahlOffen) androidx.compose.ui.window.Dialog(onDismissRequest = { wahlOffen = false }) {
         // Eigene, vollständig deckende Fläche ohne Überschrift: nur die drei Sonnenzeitpunkte.
+        // Wie in DesignDialog gilt die Kartendeckkraft für Dialoge nicht: fest 100 %.
+        CompositionLocalProvider(LocalKartenDeckkraft provides 1f) {
         LocalGestalt.current.Flaeche(Modifier.fillMaxWidth().background(gold.flaecheErhoeht, RoundedCornerShape(LocalDesignTokens.current.karteRadius)), erhoeht = true) {
             Column(Modifier.fillMaxWidth().background(gold.flaecheErhoeht).padding(vertical = 8.dp)) {
                 SonnenWecker.Ereignis.entries.forEach { e ->
@@ -4128,6 +4130,7 @@ private fun SonnenWahl(alarm: Alarm, change: (Alarm) -> Unit) {
                     }
                 }
             }
+        }
         }
     }
     fun setze(v: Int) { versatz = v.coerceIn(SonnenWecker.VERSATZ_MIN, SonnenWecker.VERSATZ_MAX); change(alarm.copy(sunOffsetMinutes = versatz)) }

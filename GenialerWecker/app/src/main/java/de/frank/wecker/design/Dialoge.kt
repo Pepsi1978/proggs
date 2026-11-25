@@ -205,12 +205,11 @@ fun DesignDialog(
 
         // Das Dialogfenster selbst ist durchsichtig. Deckend wird die Fläche durch die Gestalt:
         // `GoldKarte` füllt mit einem Verlauf aus `gold.flaecheErhoeht`, `Flaeche` füllt flach mit
-        // derselben Farbe. Alle Paletten (Farben.kt und Paletten.kt) führen `flaeche` und
-        // `flaecheErhoeht` als volldeckende 0xFF-Farben, und der weiche Palettenwechsel in
-        // `GenialeIdeenTheme` behält den Alphawert bei — hinter dem Inhalt scheint also nichts durch.
-        // Die einstellbare Kartendeckkraft gilt nur für Karten auf dem Hintergrund, nie für Dialoge:
-        // Der Rahmen nutzt die HERO-Ebene, die sonst die Deckkraft übernähme — bei 0 % stand der
-        // Dialog „Änderungen speichern?" völlig durchsichtig über dem Editor. Deshalb hier fest 100 %.
+        // derselben Farbe. Alle Paletten führen diese Farben volldeckend (0xFF) — aber nur, solange
+        // die Kartendeckkraft 100 % ist: Beide nutzen die HERO-Ebene, die sonst die einstellbare
+        // Kartendeckkraft übernimmt. Im plastischen Zweig (`GoldKarte`, Schlicht) liegt keine eigene
+        // Grundfarbe darunter; bei 0 % stand der Dialog „Änderungen speichern?" dort völlig
+        // durchsichtig über dem Editor. Deshalb gilt in jedem Dialog fest 100 % — nicht entfernen.
         CompositionLocalProvider(LocalKartenDeckkraft provides 1f) {
         if (tokens.plastisch) {
             // Schlicht behält den gewohnten Gold-Look mit Verlauf, Lichtkante und Tiefenschatten.
