@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Mentalität (Vorleseschleife mentaler Sätze) gibt es in JarvisWindows nicht; Sleep-Timer und Einstellungen hängen am Android-Spieler",
+ "review": "",
+ "tests": "",
  "host": "Supi",
- "ziel": "hp",
- "zeit": "2026-11-28T11:57:42+01:00",
- "versuch": 1
+ "zeit": "2026-11-28T11:58:28+01:00"
 }
