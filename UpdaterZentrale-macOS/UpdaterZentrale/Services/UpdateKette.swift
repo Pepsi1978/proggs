@@ -67,9 +67,12 @@ final class UpdateKette {
         status("Wartet, bis der neue Stand lesbar ist …")
         let beginn = Date()
         var runde = 1
-        while runde <= runden && Date().timeIntervalSince(beginn) < unlesbarNachfrist {
-            try? await Task.sleep(nanoseconds: UInt64(unlesbarPause * 1_000_000_000))
-            if AbbruchMarke.aktuell?.istAbgebrochen == true { return "" }
+        while runde <= runden {
+            let rest = unlesbarNachfrist - Date().timeIntervalSince(beginn)
+            if rest <= 0 { break }
+            // Ein Task-Abbruch beendet die Nachfrist, statt die Lesungen ohne Pause hintereinander zu starten.
+            do { try await Task.sleep(nanoseconds: UInt64(min(rest, unlesbarPause) * 1_000_000_000)) } catch { return "" }
+            if AbbruchMarke.aktuell?.istAbgebrochen == true || Task.isCancelled { return "" }
             let stand = await aktualisierer.fingerabdruck(eintrag)
             if !stand.istLeer {
                 protokoll.berichte("Stand nach \(Int(Date().timeIntervalSince(beginn))) s lesbar: " + stand)
@@ -213,8 +216,14 @@ final class UpdateKette {
             for versuch in 1...maxNachpruefungen {
                 if versuch > 1 { try? await Task.sleep(nanoseconds: UInt64(pause * 1_000_000_000)) }
                 standNach = await aktualisierer.fingerabdruck(eintrag)
-                if versuch == maxNachpruefungen && standNach.istLeer && !standVor.istLeer {
+                // Jede Lesung, die die Schleife beenden wuerde: die letzte und die erste nach "bereits aktuell".
+                if standNach.istLeer && !standVor.istLeer
+                    && (versuch == maxNachpruefungen || ergebnis.zustand == .aktuell) {
                     standNach = await unlesbarenStandAbwarten()
+                    // Waehrend der Nachfrist abgebrochen: kein Urteil "nicht verifiziert", keine Pruefung mehr.
+                    if AbbruchMarke.aktuell?.istAbgebrochen == true || Task.isCancelled {
+                        return ende(.abgebrochen, "Abgebrochen.", ergebnis)
+                    }
                 }
                 let bewegt = Self.fortschritt(standVor, standNach)
                 let letzterVersuch = versuch == maxNachpruefungen

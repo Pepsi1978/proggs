@@ -221,7 +221,9 @@ public sealed class UpdateKette
             {
                 if (versuch > 1) await _warten(Pause, abbruch);
                 standNach = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
-                if (versuch == MaxNachpruefungen && string.IsNullOrWhiteSpace(standNach) && !string.IsNullOrWhiteSpace(standVor))
+                // Every read that would end the loop: the last one, and the first after an "already current" run.
+                if (string.IsNullOrWhiteSpace(standNach) && !string.IsNullOrWhiteSpace(standVor)
+                    && (versuch == MaxNachpruefungen || ergebnis.Zustand == UpdateZustand.Aktuell))
                     standNach = await UnlesbarenStandAbwartenAsync(abbruch);
                 var bewegt = Fortschritt(standVor, standNach);
                 Diagnose.Ereignis(Schwere.Debug, "kette", "kette.nachpruefung", "Nachprüfung " + versuch + " von " + MaxNachpruefungen
@@ -352,6 +354,8 @@ public sealed class UpdateKette
     /// <summary>
     /// The regular settle reads all came back unreadable although the state was readable before the
     /// run: keep reading, bounded by rounds and by wall time (a slow dry run must not multiply it).
+    /// A state that stays unreadable for good (exe path gone) costs this time once per run; the
+    /// verdict is then the same "not verified" as before.
     /// </summary>
     /// <returns>The first readable state, or "" when it stays unreadable.</returns>
     private async Task<string> UnlesbarenStandAbwartenAsync(CancellationToken abbruch)
@@ -362,10 +366,12 @@ public sealed class UpdateKette
                           + "Warte bis zu " + UnlesbarNachfrist.TotalSeconds.ToString("0") + " s …");
         _status("Wartet, bis der neue Stand lesbar ist …");
         var uhr = System.Diagnostics.Stopwatch.StartNew();
-        for (var runde = 1; runde <= runden && uhr.Elapsed < UnlesbarNachfrist; runde++)
+        for (var runde = 1; runde <= runden; runde++)
         {
-            await _warten(UnlesbarPause, abbruch);
-            var stand = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
+            var rest = UnlesbarNachfrist - uhr.Elapsed;
+            if (rest <= TimeSpan.Zero) break;
+            await _warten(rest < UnlesbarPause ? rest : UnlesbarPause, abbruch);
+            var stand = await LesenBegrenztAsync(abbruch);
             if (!string.IsNullOrWhiteSpace(stand))
             {
                 _protokoll.Report("Stand nach " + uhr.Elapsed.TotalSeconds.ToString("0") + " s lesbar: " + stand);
@@ -374,6 +380,21 @@ public sealed class UpdateKette
         }
         _protokoll.Report("Der Stand blieb " + uhr.Elapsed.TotalSeconds.ToString("0") + " s lang unlesbar.");
         return "";
+    }
+
+    /// <summary>One reading, bounded by AbschlussLesegrenze; a hanging query counts as unreadable, a user cancel throws.</summary>
+    private async Task<string> LesenBegrenztAsync(CancellationToken abbruch)
+    {
+        using var grenze = CancellationTokenSource.CreateLinkedTokenSource(abbruch);
+        grenze.CancelAfter(AbschlussLesegrenze);
+        try
+        {
+            return await _aktualisierer.FingerabdruckAsync(_eintrag, grenze.Token).WaitAsync(grenze.Token);
+        }
+        catch (OperationCanceledException) when (!abbruch.IsCancellationRequested)
+        {
+            return "";
+        }
     }
 
     /// <summary>Card state for a non-success: the provider's truth, shown as an error.</summary>

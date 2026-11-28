@@ -17,7 +17,9 @@ Ergebnis: „Nicht verifiziert – Der Stand ließ sich nach dem Update nicht er
 
 Sind alle regulären Nachprüfungen unlesbar, obwohl der Stand vor dem Lauf lesbar war, liest die Kette weiter: alle 10 s, höchstens 90 s lang (`UnlesbarNachfrist`, `UnlesbarPause`). Begrenzt wird die Nachfrist doppelt, über die Zahl der Runden und über die Uhr, damit ein langsamer Dry-Run die Wartezeit nicht vervielfacht. Im Protokoll steht „Der Stand ist gleich nach dem Update nicht lesbar … Warte bis zu 90 s“ und danach „Stand nach N s lesbar“ oder „blieb N s lang unlesbar“. Bleibt er unlesbar, ist das Urteil wie bisher „Nicht verifiziert“. Ein unlesbarer Stand wird also nie als Erfolg gewertet.
 
-Gilt für alle Arten (cli, npm, winget, reposkript …), nicht nur für Claude Code. Hatte ein Programm schon vorher keinen lesbaren Stand, kostet die Nachfrist keine Zeit.
+Die Nachfrist gilt für alle Arten (cli, npm, winget, reposkript …), nicht nur für Claude Code. Sie greift bei jeder Lesung, die die Nachprüfung beenden würde: bei der letzten regulären und, nach einem Lauf mit „bereits aktuell“, schon bei der ersten. Jede Lesung ist auf `AbschlussLesegrenze` (20 s) begrenzt, die letzte Pause wird auf die Restzeit gekürzt. Bricht der Nutzer auf dem Mac während der Nachfrist ab, endet die Kette als „Abgebrochen“. Unter Windows bricht der Abbruch-Token sie sowieso ab.
+
+Kosten: Hatte ein Programm schon vor dem Lauf keinen lesbaren Stand, kostet die Nachfrist keine Zeit. Bleibt der Stand nach dem Update dauerhaft unlesbar, etwa weil `exePfad` nach einem Upgrade in einen neuen Versionsordner ins Leere zeigt, kostet das einmal bis zu ~90 s je Lauf. Das Urteil ist dann trotzdem „Nicht verifiziert“, der Katalogeintrag muss ohnehin repariert werden.
 
 ## Merksatz
 
