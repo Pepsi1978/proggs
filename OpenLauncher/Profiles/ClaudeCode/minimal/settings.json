@@ -246,7 +246,7 @@
   ],
   "theme": "dark",
   "verbose": false,
-  "preferredNotifChannel": "terminal_bell",
+  "preferredNotifChannel": "auto",
   "autoCompactEnabled": true,
   "switchModelsOnFlag": true,
   "remoteControlAtStartup": true,
