@@ -44,6 +44,10 @@ final class UpdateKette {
     var maxDurchlaeufe = 3
     var maxNachpruefungen = 4
     var pause: TimeInterval = 3
+    /// Nachfrist fuer einen Stand, der vor dem Lauf lesbar war und direkt danach nicht: die neue
+    /// Datei wird evtl. noch geschrieben oder entpackt (Windows, Claude Code 28.11.2026).
+    var unlesbarNachfrist: TimeInterval = 90
+    var unlesbarPause: TimeInterval = 10
 
     init(_ aktualisierer: Aktualisierer, _ eintrag: ProgrammEintrag, _ protokoll: Fortschritt,
          status: @escaping (String) -> Void) {
@@ -51,6 +55,30 @@ final class UpdateKette {
         self.eintrag = eintrag
         self.protokoll = protokoll
         self.status = status
+    }
+
+    /// Alle regulaeren Nachpruefungen waren unlesbar, obwohl der Stand vorher lesbar war: begrenzt
+    /// weiterlesen, nach Runden und nach Uhrzeit. Liefert den ersten lesbaren Stand oder "".
+    private func unlesbarenStandAbwarten() async -> String {
+        guard unlesbarPause > 0, unlesbarNachfrist > 0 else { return "" }
+        let runden = Int((unlesbarNachfrist / unlesbarPause).rounded(.up))
+        protokoll.berichte("Der Stand ist gleich nach dem Update nicht lesbar – die neue Datei wird womöglich noch "
+                           + "geschrieben oder geprüft. Warte bis zu \(Int(unlesbarNachfrist)) s …")
+        status("Wartet, bis der neue Stand lesbar ist …")
+        let beginn = Date()
+        var runde = 1
+        while runde <= runden && Date().timeIntervalSince(beginn) < unlesbarNachfrist {
+            try? await Task.sleep(nanoseconds: UInt64(unlesbarPause * 1_000_000_000))
+            if AbbruchMarke.aktuell?.istAbgebrochen == true { return "" }
+            let stand = await aktualisierer.fingerabdruck(eintrag)
+            if !stand.istLeer {
+                protokoll.berichte("Stand nach \(Int(Date().timeIntervalSince(beginn))) s lesbar: " + stand)
+                return stand
+            }
+            runde += 1
+        }
+        protokoll.berichte("Der Stand blieb \(Int(Date().timeIntervalSince(beginn))) s lang unlesbar.")
+        return ""
     }
 
     /// Schritt 0, abgetrennt, damit der Aufrufer dazwischen seine Beenden-Frage stellen kann.
@@ -185,6 +213,9 @@ final class UpdateKette {
             for versuch in 1...maxNachpruefungen {
                 if versuch > 1 { try? await Task.sleep(nanoseconds: UInt64(pause * 1_000_000_000)) }
                 standNach = await aktualisierer.fingerabdruck(eintrag)
+                if versuch == maxNachpruefungen && standNach.istLeer && !standVor.istLeer {
+                    standNach = await unlesbarenStandAbwarten()
+                }
                 let bewegt = Self.fortschritt(standVor, standNach)
                 let letzterVersuch = versuch == maxNachpruefungen
 

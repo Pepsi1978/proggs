@@ -54,6 +54,14 @@ public sealed class UpdateKette
     public TimeSpan Pause { get; init; } = TimeSpan.FromSeconds(3);
     public TimeSpan AbschlussLesegrenze { get; init; } = TimeSpan.FromSeconds(20);
 
+    /// <summary>
+    /// Extra time for a state that is unreadable right after a run that went through, while it was
+    /// readable before: the new exe may still be written, unpacked or scanned (Claude Code
+    /// 28.11.2026: "nicht kompatibel mit der Windows-Version" for ~10 s after "claude update").
+    /// </summary>
+    public TimeSpan UnlesbarNachfrist { get; init; } = TimeSpan.FromSeconds(90);
+    public TimeSpan UnlesbarPause { get; init; } = TimeSpan.FromSeconds(10);
+
     internal const string NichtLesbar = "(nicht lesbar)";
 
     /// <summary>Test seam: the blocking processes running now.</summary>
@@ -213,6 +221,8 @@ public sealed class UpdateKette
             {
                 if (versuch > 1) await _warten(Pause, abbruch);
                 standNach = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
+                if (versuch == MaxNachpruefungen && string.IsNullOrWhiteSpace(standNach) && !string.IsNullOrWhiteSpace(standVor))
+                    standNach = await UnlesbarenStandAbwartenAsync(abbruch);
                 var bewegt = Fortschritt(standVor, standNach);
                 Diagnose.Ereignis(Schwere.Debug, "kette", "kette.nachpruefung", "Nachprüfung " + versuch + " von " + MaxNachpruefungen
                     + (bewegt ? ": Stand bewegt" : ": Stand unverändert"), "nachpruefung",
@@ -337,6 +347,33 @@ public sealed class UpdateKette
             Diagnose.Gefangen(ex, "kette", Schwere.Warnung);
             return NichtLesbar;
         }
+    }
+
+    /// <summary>
+    /// The regular settle reads all came back unreadable although the state was readable before the
+    /// run: keep reading, bounded by rounds and by wall time (a slow dry run must not multiply it).
+    /// </summary>
+    /// <returns>The first readable state, or "" when it stays unreadable.</returns>
+    private async Task<string> UnlesbarenStandAbwartenAsync(CancellationToken abbruch)
+    {
+        if (UnlesbarPause <= TimeSpan.Zero || UnlesbarNachfrist <= TimeSpan.Zero) return "";
+        var runden = (int)Math.Ceiling(UnlesbarNachfrist / UnlesbarPause);
+        _protokoll.Report("Der Stand ist gleich nach dem Update nicht lesbar – die neue Datei wird womöglich noch geschrieben oder geprüft. "
+                          + "Warte bis zu " + UnlesbarNachfrist.TotalSeconds.ToString("0") + " s …");
+        _status("Wartet, bis der neue Stand lesbar ist …");
+        var uhr = System.Diagnostics.Stopwatch.StartNew();
+        for (var runde = 1; runde <= runden && uhr.Elapsed < UnlesbarNachfrist; runde++)
+        {
+            await _warten(UnlesbarPause, abbruch);
+            var stand = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
+            if (!string.IsNullOrWhiteSpace(stand))
+            {
+                _protokoll.Report("Stand nach " + uhr.Elapsed.TotalSeconds.ToString("0") + " s lesbar: " + stand);
+                return stand;
+            }
+        }
+        _protokoll.Report("Der Stand blieb " + uhr.Elapsed.TotalSeconds.ToString("0") + " s lang unlesbar.");
+        return "";
     }
 
     /// <summary>Card state for a non-success: the provider's truth, shown as an error.</summary>
