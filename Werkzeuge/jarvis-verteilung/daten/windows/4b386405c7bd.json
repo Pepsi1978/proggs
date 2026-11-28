@@ -5,9 +5,10 @@
  "quellen": [
   "mobil"
  ],
- "status": "in_arbeit",
+ "status": "uebersprungen",
+ "grund": "Android-spezifische Absicherung (AlarmManager, Compose-Regler) des Mentalität-Sleep-Timers; Mentalität fehlt in JarvisWindows",
+ "review": "",
+ "tests": "",
  "host": "Supi",
- "ziel": "hp",
- "zeit": "2026-11-28T11:57:42+01:00",
- "versuch": 1
+ "zeit": "2026-11-28T11:58:34+01:00"
 }
