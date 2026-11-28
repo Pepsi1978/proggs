@@ -48,7 +48,7 @@
 | 12 | parallele Schreiber | `filelock` + atomar (kein `fcntl`/`msvcrt` direkt) | §5.8 |
 | 13 | `re.sub`-Replacement | NIE Raw-String mit `\U`-Escape mischen — Lambda nutzen | §9.1 |
 | 14 | Fremdcode ohne `encoding=` | Notbremse `PYTHONUTF8=1` / `python -X utf8` | §1.3 |
-| 15 | `python`/`pip` auf Windows | `py -3` + `python -m pip` (nicht MS-Store-Stub) | §6.1 |
+| 15 | `python`/`pip` auf Windows | `py -3` + `python -m pip` (nicht MS-Store-Stub); in Programmen nie nackt `py`/`python`, `python.exe`-Pfad auflösen (Install Manager hat kein `py`) | §6.1, §6.1a |
 | 16 | Skript > 30 Zeilen im Bash-Werkzeug | Nie als Heredoc: per Write in den Scratchpad, dann ausführen | §10.1 |
 | 17 | Ersetzskript auf Repo-Datei (Kotlin, C#) | CRLF nach dem Lesen in LF wandeln, beim Schreiben zurück (alle Plattformen) | §10.2 |
 
@@ -468,6 +468,18 @@ Store-Stub.
 python3.exe)` deaktivieren; echtes Python in PATH vor WindowsApps. In Skripten besser den
 `py`-Launcher oder absoluten Interpreterpfad nutzen.
 **Quelle:** MS Q&A App-Execution-Alias; dev.to Python-was-not-found.
+
+### 6.1a Python Install Manager: kein `py.exe`, Aliase fallen beim Selbst-Update aus  ⭐ Frank-Setup
+**Symptom:** Ein Programm startet `py` und bekommt „Das System kann die angegebene Datei nicht
+finden“; `python` meldet gleichzeitig den Store-Platzhalter (Exit 49).
+**Ursache:** Der neue Python Install Manager (Store-Paket `PythonManager`, `pymanager`) legt
+Laufzeiten unter `%LOCALAPPDATA%\Python\pythoncore-3.xx-64\` ab und bringt nur `pymanager`,
+`pyw` und `python*`-Aliase mit. `py.exe` kommt nur mit dem separaten `Python.Launcher`.
+Aktualisiert sich der Manager, können die Aliase kurz auf den Store-Platzhalter zurückfallen.
+**FIX:** In Programmen nie nackt `py`/`python` starten. Den Pfad zur `python.exe` auflösen:
+`%LOCALAPPDATA%\Programs\Python\Python3xx`, `%LOCALAPPDATA%\Python\pythoncore-3.xx-64`,
+`Program Files\Python3xx`, `%LOCALAPPDATA%\Python\bin`, dann PATH ohne `WindowsApps`.
+**Fall:** `bugs/bug-cases/2026-11-28-updatezentrale-jarvis-py-starter-fehlt.md`.
 
 ### 6.2 `python` vs `python3` vs `py`; Shebangs werden auf Windows ignoriert
 **Symptom:** `python3 skript.py` schlaegt fehl ("not recognized"); `#!/usr/bin/env python3`-

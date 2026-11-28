@@ -21,28 +21,115 @@ public sealed class JarvisVerteilungAktualisierer : IAktualisierer
 
     internal static string Skript => Path.Combine(Pfade.RepoWurzel, "Werkzeuge", "jarvis-verteilung", "jarvis_verteilung.py");
 
-    /// <summary>Python aus der Standardinstallation; sonst der Name aus dem PATH.</summary>
-    internal static string Python()
+    /// <summary>
+    /// Ein echtes python.exe, ohne sich auf einen Starter im PATH zu verlassen. Gesucht wird in dieser Reihenfolge:
+    /// klassischer Installer (%LOCALAPPDATA%\Programs\Python\Python3xx), Python Install Manager
+    /// (%LOCALAPPDATA%\Python\pythoncore-3.xx-64, dort gibt es kein „py“, wenn der Launcher fehlt),
+    /// systemweite Installation (Program Files), dann PATH ohne WindowsApps (dort liegt der Store-Platzhalter,
+    /// der „Python wurde nicht gefunden“ meldet). Null, wenn nichts da ist.
+    /// </summary>
+    internal static string? Python()
     {
-        var lokal = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python");
-        if (Directory.Exists(lokal))
-        {
-            // Nach Versionsnummer, nicht als Text: sonst gewänne Python39 gegen Python313.
-            var exe = Directory.GetDirectories(lokal, "Python3*")
-                               .OrderByDescending(d => int.TryParse(Path.GetFileName(d)["Python".Length..].Split('-')[0], out var n) ? n : 0)
-                               .Select(d => Path.Combine(d, "python.exe")).FirstOrDefault(File.Exists);
-            if (exe is not null) return exe;
-        }
-        // „py“ ist der offizielle Starter; „python“ kann der Store-Platzhalter sein.
-        return "py";
+        // Ein Treffer bleibt gültig, solange die Datei existiert: spart die Suche bei jedem Kartenabgleich.
+        if (_python is { } bekannt && File.Exists(bekannt)) return bekannt;
+        return _python = PythonSuchen();
     }
+
+    private static string? _python;
+
+    internal const string MusterKlassisch = @"^Python3(\d{1,3})(-64|-arm64|-32)?$";
+    internal const string MusterInstallManager = @"^pythoncore-3\.(\d{1,3})(-64|-arm64|-32)?$";
+
+    private static string? PythonSuchen()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var programme = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        // Über alle Wurzeln gemeinsam nach Version sortiert: ein altes Python38 schlägt kein neueres pythoncore-3.14.
+        var exe = Versionsordner([(Path.Combine(appData, "Programs", "Python"), MusterKlassisch),
+                                  (Path.Combine(appData, "Python"), MusterInstallManager),
+                                  (programme, MusterKlassisch)])
+                  .Select(d => Path.Combine(d, "python.exe"))
+                  .Append(Path.Combine(appData, "Python", "bin", "python.exe"))
+                  .FirstOrDefault(File.Exists);
+        if (exe is not null) return exe;
+
+        // PATH: zuerst der offizielle Starter „py“ (wählt selbst das neueste Python 3), auch als Alias in WindowsApps.
+        // Danach python.exe/python3.exe nur nach einem Probelauf: im PATH kann ein Python 2, ein MSYS-Python oder
+        // der Store-Platzhalter in WindowsApps stehen.
+        var ordner = (Environment.GetEnvironmentVariable("PATH") ?? "")
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(o => Environment.ExpandEnvironmentVariables(o.Trim('"')))
+            .Where(o => o.Length > 0).ToList();
+        foreach (var name in new[] { "py.exe", "python3.exe", "python.exe" })
+            foreach (var o in ordner)
+            {
+                string p;
+                try { p = Path.Combine(o, name); } catch (ArgumentException) { continue; }
+                if (!File.Exists(p) && !IstAlias(p)) continue;
+                if (name == "py.exe" || TaugtAlsPython(p)) return p;
+            }
+        return null;
+    }
+
+    /// <summary>App-Ausführungsaliase in WindowsApps sind Reparse-Punkte; File.Exists sieht sie nicht immer.</summary>
+    private static bool IstAlias(string pfad)
+    {
+        try { return new FileInfo(pfad).Attributes.HasFlag(FileAttributes.ReparsePoint); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return false; }
+    }
+
+    /// <summary>Echtes Windows-Python ab 3.8 (kein Platzhalter, kein Python 2, kein MSYS)? Höchstens 10 s.</summary>
+    private static bool TaugtAlsPython(string pfad)
+    {
+        try
+        {
+            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pfad,
+                "-c \"import sys;print(sys.version_info>=(3,8) and sys.platform=='win32')\"")
+                { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true });
+            if (p is null) return false;
+            var ausgabe = p.StandardOutput.ReadToEndAsync();
+            _ = p.StandardError.ReadToEndAsync();
+            if (!p.WaitForExit(10_000)) { try { p.Kill(true); } catch (Exception) { } return false; }
+            return p.ExitCode == 0 && ausgabe.Wait(1_000) && ausgabe.Result.Trim() == "True";
+        }
+        catch (Exception) { return false; }
+    }
+
+    /// <summary>
+    /// Unterordner aller Wurzeln, deren Name zum Muster passt, nach Nebenversion absteigend (Python39 verliert gegen
+    /// Python313); bei gleicher Version zuerst 64 Bit ohne Zusatz, dann -64, -arm64, -32. Unlesbare Wurzeln zählen als leer.
+    /// </summary>
+    internal static IEnumerable<string> Versionsordner(IEnumerable<(string Wurzel, string Muster)> wurzeln)
+    {
+        var treffer = new List<(string Ordner, int Version, int Rang)>();
+        foreach (var (wurzel, muster) in wurzeln)
+        {
+            string[] ordner;
+            try { ordner = Directory.Exists(wurzel) ? Directory.GetDirectories(wurzel) : []; }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
+            foreach (var d in ordner)
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(Path.GetFileName(d), muster, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (!m.Success || !int.TryParse(m.Groups[1].Value, out var version)) continue;
+                var rang = m.Groups[2].Value.ToLowerInvariant() switch { "" => 0, "-64" => 1, "-arm64" => 2, _ => 3 };
+                treffer.Add((d, version, rang));
+            }
+        }
+        return treffer.OrderByDescending(t => t.Version).ThenBy(t => t.Rang).Select(t => t.Ordner).ToList();
+    }
+
+    internal static IEnumerable<string> Versionsordner(string wurzel, string muster) => Versionsordner([(wurzel, muster)]);
+
+    private const string OhnePython = "Python nicht gefunden (gesucht: %LOCALAPPDATA%\\Programs\\Python, %LOCALAPPDATA%\\Python\\pythoncore-*, "
+                                    + "Program Files, PATH ohne Store-Platzhalter). Python über die UpdateZentrale oder winget installieren.";
 
     private static async Task<(BefehlErgebnis Lauf, JsonElement? Daten)> LaufAsync(string befehl, TimeSpan zeit, CancellationToken abbruch)
     {
         var json = Path.Combine(Path.GetTempPath(), "jarvis-verteilung-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            var lauf = await Kommandozeile.AusfuehrenAsync(Python(), "-X utf8 \"" + Skript + "\" " + befehl, zeit, Pfade.RepoWurzel, abbruch,
+            if (Python() is not { } python) return (new BefehlErgebnis(-1, OhnePython, false), null);
+            var lauf = await Kommandozeile.AusfuehrenAsync(python, "-X utf8 \"" + Skript + "\" " + befehl, zeit, Pfade.RepoWurzel, abbruch,
                                                            zusatzUmgebung: new Dictionary<string, string> { ["JARVIS_VERTEILUNG_JSON"] = json });
             JsonElement? daten = null;
             if (File.Exists(json))
@@ -58,9 +145,10 @@ public sealed class JarvisVerteilungAktualisierer : IAktualisierer
     public async Task<PruefErgebnis> PruefenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
     {
         if (!File.Exists(Skript)) return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Verteil-Skript fehlt: " + Skript);
+        if (Python() is not { } python) return new PruefErgebnis(UpdateZustand.Fehler, Meldung: OhnePython);
         if (!_eingerichtet)
         {
-            var e = await Kommandozeile.AusfuehrenAsync(Python(), "-X utf8 \"" + Skript + "\" einrichten", TimeSpan.FromMinutes(1), Pfade.RepoWurzel, abbruch);
+            var e = await Kommandozeile.AusfuehrenAsync(python, "-X utf8 \"" + Skript + "\" einrichten", TimeSpan.FromMinutes(1), Pfade.RepoWurzel, abbruch);
             protokoll.Report(e.Ausgabe);
             _eingerichtet = e.ExitCode == 0;
         }
